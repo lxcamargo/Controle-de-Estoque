@@ -1,0 +1,85 @@
+.importar-container {
+  padding: 30px;
+  max-width: 600px;
+  margin: 0 auto;
+  font-family: Arial, sans-serif;
+  background-color: #fff;
+  border-radius: 8px;
+}
+
+.titulo-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+
+.titulo-area h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #333;
+}
+
+.icone {
+  width: 40px;
+  height: 40px;
+}
+
+.upload-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.arquivo-label {
+  background-color: #f0f0f0;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  font-weight: bold;
+  color: #333;
+}
+
+.arquivo-label input {
+  display: none;
+}
+
+.arquivo-nome {
+  font-size: 14px;
+  color: #555;
+}
+
+.botao-importar {
+  padding: 12px;
+  background-color: #0078D4;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.botao-importar:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+.mensagem {
+  margin-top: 20px;
+  font-weight: bold;
+  color: #333;
+}
+
+.erros-area {
+  margin-top: 20px;
+  color: red;
+}
+
+.erros-area h4 {
+  margin-bottom: 8px;
+}

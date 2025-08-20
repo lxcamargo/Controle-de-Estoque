@@ -1,0 +1,64 @@
+.dashboard-container {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.dashboard-container h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #2c3e50;
+}
+
+.dashboard-section {
+  margin-bottom: 40px;
+}
+
+.dashboard-section h3 {
+  margin-bottom: 15px;
+  color: #34495e;
+  font-size: 1.2rem;
+}
+
+/* Grid moderno para os botões */
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+
+/* Botões estilizados */
+.button-grid button {
+  padding: 12px 18px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.button-grid button:hover {
+  background-color: #2980b9;
+  transform: translateY(-2px);
+}
+
+/* Responsividade extra para telas menores */
+@media (max-width: 600px) {
+  .dashboard-container {
+    padding: 15px;
+  }
+
+  .button-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .button-grid button {
+    width: 100%;
+  }
+}
