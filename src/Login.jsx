@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./Login.css";
+import "./login.css";
 
 // 🔗 Conexão com Supabase
 const supabase = createClient(
