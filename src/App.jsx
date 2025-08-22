@@ -10,7 +10,7 @@ import ProdutosCadastrados from "./ProdutosCadastrados.jsx";
 import ImportarProdutos from "./ImportarProdutos.jsx";
 import CadastroDinamico from "./CadastroDinamico.jsx";
 import SaidaProduto from "./SaidaProduto.jsx";
-import CadastroUsuario from './Cadastrousuario.jsx';
+import CadastroUsuario from './CadastroUsuario.jsx';
 import HistoricoEntradas from "./HistoricoEntradas.jsx";
 import HistoricoSaida from "./HistoricoSaida.jsx"; // ✅ caminho corrigido
 import PainelValidade from "./PainelValidade";
