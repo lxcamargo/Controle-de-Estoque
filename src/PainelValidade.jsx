@@ -111,6 +111,20 @@ export default function PainelValidade() {
     XLSX.writeFile(workbook, "painel-validade.xlsx");
   };
 
+  // 🔧 Geração dinâmica dos anos presentes na tabela
+  const anosDisponiveis = Array.from(
+    new Set(
+      estoque
+        .map(item => item.validade)
+        .filter(Boolean)
+        .map(data => {
+          const ano = new Date(data + "T00:00:00").getFullYear();
+          return !isNaN(ano) ? ano : null;
+        })
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a - b);
+
   return (
     <div style={{ padding: "2rem" }}>
       <h2>📊 Painel de Validade</h2>
@@ -152,7 +166,7 @@ export default function PainelValidade() {
         </select>
         <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
           <option value="">Ano</option>
-          {[2024, 2025, 2026].map(ano => (
+          {anosDisponiveis.map(ano => (
             <option key={ano} value={ano}>{ano}</option>
           ))}
         </select>
@@ -191,24 +205,24 @@ export default function PainelValidade() {
               <tr key={index} style={estiloValidadeFaixa(item.validadeRaw)}>
                 <td>{item.ean}</td>
                 <td style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <div
-                    style={{
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      ...estiloBolinha(item.validadeRaw)
-                    }}
-                  ></div>
-                  {item.descricao}
-                </td>
-                <td>{item.marca}</td>
-                <td>{item.quantidade}</td>
-                <td>{item.validade}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
+                   <div
+              style={{
+                width: "12px",
+                height: "12px",
+                borderRadius: "50%",
+                ...estiloBolinha(item.validadeRaw)
+              }}
+            ></div>
+            {item.descricao}
+          </td>
+          <td>{item.marca}</td>
+          <td>{item.quantidade}</td>
+          <td>{item.validade}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+)}
+</div>
+);
 }

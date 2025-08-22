@@ -127,6 +127,20 @@ export default function Estoque() {
     XLSX.writeFile(workbook, "estoque.xlsx");
   };
 
+  // 🔧 Geração dinâmica dos anos disponíveis
+  const anosDisponiveis = Array.from(
+    new Set(
+      estoque
+        .map(item => item.validade)
+        .filter(Boolean)
+        .map(data => {
+          const ano = new Date(data + "T00:00:00").getFullYear();
+          return !isNaN(ano) ? ano : null;
+        })
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a - b);
+
   return (
     <div style={{ padding: "2rem" }}>
       <h1>📦 Estoque Atual</h1>
@@ -155,7 +169,7 @@ export default function Estoque() {
         />
       </div>
 
-      {/* ✅ Novos filtros por mês e ano da validade */}
+      {/* ✅ Filtros por mês e ano da validade */}
       <div style={{ marginBottom: "1rem" }}>
         <select
           value={filtro.mesValidade}
@@ -175,8 +189,10 @@ export default function Estoque() {
           onChange={e => setFiltro({ ...filtro, anoValidade: e.target.value })}
         >
           <option value="">Filtrar por ano</option>
-          {[2024, 2025, 2026, 2027].map(ano => (
-            <option key={ano} value={ano}>{ano}</option>
+          {anosDisponiveis.map(ano => (
+            <option key={ano} value={String(ano)}>
+              {ano}
+            </option>
           ))}
         </select>
       </div>
