@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./CadastroUsuario.css"; // opcional para estilos externos
+import "./cadastrousuario.css";// opcional para estilos externos
 
 function CadastroUsuario() {
   const [nome, setNome] = useState("");
