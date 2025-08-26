@@ -130,13 +130,13 @@ const SaidaProduto = () => {
         return;
       }
 
-      // ⬇️ Inserção no histórico
       const usuarioEmail = localStorage.getItem("usuarioEmail") || "desconhecido@local";
       const dadosHistorico = {
         id_produto: produtoInfo.id,
         ean: produtoInfo.ean,
         quantidade: quantidadeNum,
         lote: lote || null,
+        validade: estoqueSelecionado.validade, // ✅ Validade incluída no histórico
         data_saida: new Date().toISOString(),
         usuario_email: usuarioEmail,
       };
@@ -164,7 +164,11 @@ const SaidaProduto = () => {
 
       setMensagem("✅ Saída registrada e estoque atualizado com sucesso!");
       setTimeout(() => {
-        window.open(window.location.origin + "/dashboard", "_blank");
+        setProdutoInfo(null);
+        setEan('');
+        setQuantidade('');
+        setLote('');
+        setValidade('');
       }, 1500);
     } catch (err) {
       console.error("❌ Erro inesperado:", err);

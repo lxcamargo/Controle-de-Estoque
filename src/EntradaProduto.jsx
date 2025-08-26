@@ -13,7 +13,6 @@ const EntradaProduto = () => {
   const [usuarioEmail, setUsuarioEmail] = useState('');
   const navigate = useNavigate();
 
-  // ✅ Carrega o e-mail do usuário logado ao montar o componente
   useEffect(() => {
     const emailSalvo = localStorage.getItem("usuarioEmail");
     setUsuarioEmail(emailSalvo || "desconhecido@local");
@@ -136,7 +135,12 @@ const EntradaProduto = () => {
 
       setMensagem("✅ Entrada registrada com sucesso!");
       setTimeout(() => {
-        window.open("/dashboard", "_blank");
+        setProdutoEncontrado(false);
+        setProdutoInfo(null);
+        setEan('');
+        setValidade('');
+        setQuantidade('');
+        setLote('');
       }, 1500);
     } catch (err) {
       console.error("❌ Erro inesperado:", err);

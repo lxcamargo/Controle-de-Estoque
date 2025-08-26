@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
-import * as XLSX from 'xlsx'; // ✅ Nova importação
+import * as XLSX from 'xlsx';
 
 const HistoricoSaida = () => {
   const [registros, setRegistros] = useState([]);
@@ -11,23 +11,33 @@ const HistoricoSaida = () => {
     setUsuarioEmail(emailSalvo || "desconhecido@local");
 
     const carregarHistorico = async () => {
-      const { data, error } = await supabase
+      const { data: saidaData, error: saidaError } = await supabase
         .from("saida_historico")
         .select("*")
         .order("data_saida", { ascending: false });
 
-      if (error) {
-        console.error("❌ Erro ao carregar histórico de saída:", error);
+      if (saidaError) {
+        console.error("❌ Erro ao carregar histórico de saída:", saidaError);
         return;
       }
 
-      setRegistros(data);
+      const registrosComFormatacao = saidaData.map((item) => {
+        const validadeFormatada = item.validade
+          ? item.validade.slice(0, 10).split("-").reverse().join("/")
+          : "—";
+
+        return {
+          ...item,
+          validade_formatada: validadeFormatada
+        };
+      });
+
+      setRegistros(registrosComFormatacao);
     };
 
     carregarHistorico();
   }, []);
 
-  // ✅ Função de exportação
   const exportarSaidaParaExcel = () => {
     if (!registros || registros.length === 0) {
       alert("Nenhum registro de saída para exportar.");
@@ -46,6 +56,7 @@ const HistoricoSaida = () => {
         minute: "2-digit",
         second: "2-digit"
       }),
+      Validade: item.validade_formatada,
       Usuário: item.usuario_email
     }));
 
@@ -84,6 +95,7 @@ const HistoricoSaida = () => {
                 <th style={{ padding: "0.75rem", textAlign: "center" }}>🔢 Quantidade</th>
                 <th style={{ padding: "0.75rem", textAlign: "center" }}>🏷️ Lote</th>
                 <th style={{ padding: "0.75rem", textAlign: "center" }}>📅 Data</th>
+                <th style={{ padding: "0.75rem", textAlign: "center" }}>📆 Validade</th>
                 <th style={{ padding: "0.75rem", textAlign: "left" }}>👤 Usuário</th>
               </tr>
             </thead>
@@ -109,6 +121,7 @@ const HistoricoSaida = () => {
                       second: "2-digit"
                     })}
                   </td>
+                  <td style={{ padding: "0.75rem", textAlign: "center" }}>{item.validade_formatada}</td>
                   <td style={{ padding: "0.75rem" }}>{item.usuario_email}</td>
                 </tr>
               ))}

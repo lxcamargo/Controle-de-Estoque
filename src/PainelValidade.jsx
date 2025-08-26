@@ -17,7 +17,8 @@ export default function PainelValidade() {
     const carregarDados = async () => {
       const { data: dadosEstoque, error: erroEstoque } = await supabase
         .from("estoque")
-        .select("*");
+        .select("*")
+        .gt("quantidade", 0); // ✅ Filtra produtos com saldo positivo
 
       const { data: dadosProdutos, error: erroProdutos } = await supabase
         .from("produto")
@@ -111,7 +112,6 @@ export default function PainelValidade() {
     XLSX.writeFile(workbook, "painel-validade.xlsx");
   };
 
-  // 🔧 Geração dinâmica dos anos presentes na tabela
   const anosDisponiveis = Array.from(
     new Set(
       estoque
@@ -205,24 +205,24 @@ export default function PainelValidade() {
               <tr key={index} style={estiloValidadeFaixa(item.validadeRaw)}>
                 <td>{item.ean}</td>
                 <td style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                   <div
-              style={{
-                width: "12px",
-                height: "12px",
-                borderRadius: "50%",
-                ...estiloBolinha(item.validadeRaw)
-              }}
-            ></div>
-            {item.descricao}
-          </td>
-          <td>{item.marca}</td>
-          <td>{item.quantidade}</td>
-          <td>{item.validade}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-)}
-</div>
-);
+                  <div
+                    style={{
+                      width: "12px",
+                      height: "12px",
+                      borderRadius: "50%",
+                      ...estiloBolinha(item.validadeRaw)
+                    }}
+                  ></div>
+                  {item.descricao}
+                </td>
+                <td>{item.marca}</td>
+                <td>{item.quantidade}</td>
+                <td>{item.validade}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
 }

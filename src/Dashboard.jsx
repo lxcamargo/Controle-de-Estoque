@@ -18,9 +18,7 @@ const Dashboard = () => {
         <div className="button-grid">
           <button onClick={() => abrirEmNovaAba("/entrada-produto")}>🆕 Registrar Entrada</button>
           <button onClick={() => abrirEmNovaAba("/saida-produto")}>📤 Registrar Saída</button>
-          <button onClick={() => abrirEmNovaAba("/consultar-estoque")}>🔍 Consultar Estoque</button>
           <button onClick={() => abrirEmNovaAba("/estoque")}>📦 Visualizar Estoque</button>
-          <button onClick={() => abrirEmNovaAba("/historico-produtos")}>📜 Histórico de Produtos</button>
           <button onClick={() => abrirEmNovaAba("/historico-entradas")}>📜 Histórico de Entradas</button>
           <button onClick={() => abrirEmNovaAba("/historico-saidas")}>📤 Histórico de Saídas</button>
         </div>
@@ -32,17 +30,12 @@ const Dashboard = () => {
           <button onClick={() => abrirEmNovaAba("/cadastrar-usuario")}>👤 Cadastrar Usuário</button>
           <button onClick={() => abrirEmNovaAba("/importar-planilha")}>📄 Importar Planilha</button>
           <button onClick={() => abrirEmNovaAba("/importar-cadastro")}>📥 Importar Cadastro</button>
-          <button onClick={() => abrirEmNovaAba("/cadastro-produto")}>➕ Novo Produto</button>
-          <button onClick={() => abrirEmNovaAba("/produtos-cadastrados")}>📋 Produtos Cadastrados</button>
         </div>
       </section>
 
       <section className="dashboard-section">
         <h3>📊 Relatórios</h3>
         <div className="button-grid">
-          <button onClick={() => abrirEmNovaAba("/exportar-relatorio")}>📈 Exportar Relatório</button>
-
-          {/* ✅ Botão destacado para o Painel de Validade */}
           <button
             onClick={() => abrirEmNovaAba("/painel-validade")}
             style={{

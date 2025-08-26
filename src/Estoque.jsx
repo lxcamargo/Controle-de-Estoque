@@ -19,7 +19,8 @@ export default function Estoque() {
     const carregarDados = async () => {
       const { data: dadosEstoque, error: erroEstoque } = await supabase
         .from("estoque")
-        .select("*");
+        .select("*")
+        .gt("quantidade", 0); // ✅ Filtra produtos com saldo positivo
 
       const { data: dadosProdutos, error: erroProdutos } = await supabase
         .from("produto")
@@ -127,7 +128,6 @@ export default function Estoque() {
     XLSX.writeFile(workbook, "estoque.xlsx");
   };
 
-  // 🔧 Geração dinâmica dos anos disponíveis
   const anosDisponiveis = Array.from(
     new Set(
       estoque
@@ -169,7 +169,6 @@ export default function Estoque() {
         />
       </div>
 
-      {/* ✅ Filtros por mês e ano da validade */}
       <div style={{ marginBottom: "1rem" }}>
         <select
           value={filtro.mesValidade}
