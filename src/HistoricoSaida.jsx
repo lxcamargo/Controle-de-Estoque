@@ -5,16 +5,34 @@ import * as XLSX from 'xlsx';
 const HistoricoSaida = () => {
   const [registros, setRegistros] = useState([]);
   const [usuarioEmail, setUsuarioEmail] = useState('');
+  const [eanFiltro, setEanFiltro] = useState('');
 
   useEffect(() => {
     const emailSalvo = localStorage.getItem("usuarioEmail");
     setUsuarioEmail(emailSalvo || "desconhecido@local");
+    carregarHistorico(); // 🔄 Carrega tudo inicialmente
+  }, []);
 
-    const carregarHistorico = async () => {
-      const { data: saidaData, error: saidaError } = await supabase
+  useEffect(() => {
+    const delayBusca = setTimeout(() => {
+      carregarHistorico(eanFiltro);
+    }, 300); // ⏱️ Delay para evitar múltiplas chamadas
+
+    return () => clearTimeout(delayBusca);
+  }, [eanFiltro]);
+
+  const carregarHistorico = async (ean = "") => {
+    try {
+      let query = supabase
         .from("saida_historico")
         .select("*")
         .order("data_saida", { ascending: false });
+
+      if (ean.trim() !== "") {
+        query = query.eq("ean", ean.trim());
+      }
+
+      const { data: saidaData, error: saidaError } = await query;
 
       if (saidaError) {
         console.error("❌ Erro ao carregar histórico de saída:", saidaError);
@@ -33,10 +51,10 @@ const HistoricoSaida = () => {
       });
 
       setRegistros(registrosComFormatacao);
-    };
-
-    carregarHistorico();
-  }, []);
+    } catch (err) {
+      console.error("❌ Erro inesperado:", err);
+    }
+  };
 
   const exportarSaidaParaExcel = () => {
     if (!registros || registros.length === 0) {
@@ -73,6 +91,17 @@ const HistoricoSaida = () => {
       <p style={{ fontStyle: "italic", marginBottom: "1rem" }}>
         Usuário logado: {usuarioEmail}
       </p>
+
+      {/* 🔍 Campo de filtro por EAN */}
+      <div style={{ marginBottom: "1rem" }}>
+        <input
+          type="text"
+          placeholder="Filtrar por EAN"
+          value={eanFiltro}
+          onChange={(e) => setEanFiltro(e.target.value)}
+          style={{ padding: "0.5rem", width: "300px" }}
+        />
+      </div>
 
       {registros.length === 0 ? (
         <p>Nenhuma saída registrada ainda.</p>

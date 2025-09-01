@@ -63,7 +63,7 @@ export default function Login() {
 
   return (
     <div className="login-container">
-      <h2>🔐 Login Supabase</h2>
+      <h2>🔐 Login - Sistema</h2>
       <form onSubmit={handleLogin}>
         <input
           type="email"

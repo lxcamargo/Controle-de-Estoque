@@ -1,34 +1,51 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-import * as XLSX from "xlsx"; // ✅ Nova importação
+import * as XLSX from "xlsx";
 
 export default function HistoricoEntradas() {
   const [entradas, setEntradas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
+  const [eanFiltro, setEanFiltro] = useState("");
 
+  // 🔄 Carrega tudo inicialmente
   useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("entrada_historico_completo")
-          .select("*")
-          .order("data_entrada", { ascending: false });
-
-        if (error) throw error;
-        setEntradas(data || []);
-      } catch (err) {
-        console.error("Erro ao carregar dados:", err);
-        setErro("Não foi possível carregar os dados.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     carregarDados();
   }, []);
 
-  // ✅ Função de exportação
+  // 🔍 Recarrega ao mudar o EAN
+  useEffect(() => {
+    const delayBusca = setTimeout(() => {
+      carregarDados(eanFiltro);
+    }, 300); // pequeno delay para evitar múltiplas chamadas
+
+    return () => clearTimeout(delayBusca);
+  }, [eanFiltro]);
+
+  const carregarDados = async (ean = "") => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from("entrada_historico_completo")
+        .select("*")
+        .order("data_entrada", { ascending: false });
+
+      if (ean.trim() !== "") {
+        query = query.eq("ean", ean.trim());
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setEntradas(data || []);
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
+      setErro("Não foi possível carregar os dados.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const exportarHistoricoParaExcel = () => {
     if (!entradas || entradas.length === 0) {
       alert("Nenhum histórico de entrada para exportar.");
@@ -60,6 +77,17 @@ export default function HistoricoEntradas() {
   return (
     <div style={{ padding: "2rem" }}>
       <h2>📋 Histórico de Entradas</h2>
+
+      {/* 🔍 Campo de filtro por EAN */}
+      <div style={{ marginBottom: "1rem" }}>
+        <input
+          type="text"
+          placeholder="Filtrar por EAN"
+          value={eanFiltro}
+          onChange={(e) => setEanFiltro(e.target.value)}
+          style={{ padding: "0.5rem", width: "300px" }}
+        />
+      </div>
 
       {loading && <p>Carregando dados...</p>}
       {erro && <p style={{ color: "red" }}>{erro}</p>}

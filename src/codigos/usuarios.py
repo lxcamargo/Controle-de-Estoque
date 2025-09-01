@@ -6,12 +6,15 @@ import re
 
 app = FastAPI()
 
+# 🔐 Função para gerar hash da senha
 def hash_senha(senha):
     return hashlib.sha256(senha.encode()).hexdigest()
 
+# 📧 Validação básica de e-mail
 def email_valido(email):
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
+# 🧠 Função principal de cadastro
 def cadastrar_usuario(nome, email, senha):
     try:
         if not nome or not email or not senha:
@@ -21,20 +24,14 @@ def cadastrar_usuario(nome, email, senha):
         if len(senha) < 6:
             return {"status": "erro", "mensagem": "A senha deve ter pelo menos 6 caracteres."}
 
+        # Padroniza o e-mail antes de salvar
+        email = email.strip().lower()
         senha_hash = hash_senha(senha)
 
-        existente = supabase.table("usuarios").select("*").eq("email", email).execute().data
+        print(f"🔎 Buscando e-mail: {email} na tabela cadastro_user")
+        existente = supabase.table("cadastro_user").select("*").eq("email", email).execute().data
         if existente:
             return {"status": "erro", "mensagem": f"E-mail {email} já está cadastrado."}
-
-        auth_res = supabase.auth.admin.create_user({
-            "email": email,
-            "password": senha,
-            "email_confirm": True
-        })
-
-        if not auth_res or not auth_res.get("user"):
-            return {"status": "erro", "mensagem": "Erro ao criar usuário no Supabase Auth."}
 
         novo_usuario = {
             "nome": nome,
@@ -43,14 +40,15 @@ def cadastrar_usuario(nome, email, senha):
             "criado_em": datetime.now().isoformat()
         }
 
-        supabase.table("usuarios").insert(novo_usuario).execute()
+        supabase.table("cadastro_user").insert(novo_usuario).execute()
 
         return {"status": "sucesso", "mensagem": f"Usuário {nome} cadastrado com sucesso!"}
 
     except Exception as e:
-        print("Erro ao cadastrar usuário:", e)
+        print("❌ Erro ao cadastrar usuário:", e)
         return {"status": "erro", "mensagem": f"Erro inesperado: {str(e)}"}
 
+# 🚀 Rota de cadastro via POST
 @app.post("/cadastrar-usuario")
 async def api_cadastrar_usuario(request: Request):
     try:
