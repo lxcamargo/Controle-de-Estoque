@@ -1,8 +1,9 @@
-// src/ProdutosCadastrados.jsx
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
 const ProdutosCadastrados = () => {
+  const location = useLocation();
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -16,7 +17,7 @@ const ProdutosCadastrados = () => {
       const { data, error } = await supabase
         .from("produto")
         .select("*")
-        .order("nome", { ascending: true });
+        .order("descricao", { ascending: true });
 
       if (error) {
         console.error("Erro ao buscar produtos:", error);
@@ -28,10 +29,27 @@ const ProdutosCadastrados = () => {
     };
 
     buscarProdutos();
-  }, []);
+
+    if (location.state?.atualizar) {
+      buscarProdutos();
+      window.history.replaceState({}, document.title);
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        buscarProdutos();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [location.state]);
 
   const produtosFiltrados = produtos.filter((produto) =>
-    produto.nome.toLowerCase().includes(busca.toLowerCase())
+    produto.ean?.toString().includes(busca)
   );
 
   const totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina);
@@ -40,11 +58,14 @@ const ProdutosCadastrados = () => {
     pagina * itensPorPagina
   );
 
-  const formatarPreco = (valor) =>
-    Number(valor).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    });
+  const irParaEdicao = (id_produto) => {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id_produto);
+    if (isUUID) {
+      window.location.href = `/editar-produto/${id_produto}`;
+    } else {
+      alert("ID do produto inválido ou malformado.");
+    }
+  };
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -52,7 +73,7 @@ const ProdutosCadastrados = () => {
 
       <input
         type="text"
-        placeholder="🔍 Buscar por nome..."
+        placeholder="🔍 Buscar por EAN..."
         value={busca}
         onChange={(e) => {
           setBusca(e.target.value);
@@ -72,22 +93,33 @@ const ProdutosCadastrados = () => {
         <p>Nenhum produto encontrado.</p>
       ) : (
         <>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={tabelaStyle}>
             <thead>
               <tr>
-                <th style={thStyle}>ID</th>
-                <th style={thStyle}>Nome</th>
-                <th style={thStyle}>Categoria</th>
-                <th style={thStyle}>Preço</th>
+                <th style={celulaStyle}>EAN</th>
+                <th style={celulaStyle}>Descrição</th>
+                <th style={celulaStyle}>Marca</th>
+                <th style={celulaStyle}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {produtosPaginados.map((produto) => (
-                <tr key={produto.id}>
-                  <td style={tdStyle}>{produto.id}</td>
-                  <td style={tdStyle}>{produto.nome}</td>
-                  <td style={tdStyle}>{produto.categoria}</td>
-                  <td style={tdStyle}>{formatarPreco(produto.preco)}</td>
+                <tr key={produto.ean}>
+                  <td style={celulaStyle}>{produto.ean}</td>
+                  <td style={celulaStyle}>{produto.descricao}</td>
+                  <td style={celulaStyle}>{produto.marca}</td>
+                  <td style={celulaStyle}>
+                    <button
+                      onClick={() => irParaEdicao(produto.id_produto)}
+                      style={{
+                        ...buttonStyle,
+                        backgroundColor: "#f0f0f0",
+                        border: "1px solid #ccc",
+                      }}
+                    >
+                      Editar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -118,15 +150,17 @@ const ProdutosCadastrados = () => {
   );
 };
 
-const thStyle = {
-  borderBottom: "1px solid #ccc",
-  padding: "0.5rem",
-  textAlign: "left",
+const tabelaStyle = {
+  width: "100%",
+  borderCollapse: "collapse",
+  marginTop: "1rem",
+  fontSize: "1rem",
 };
 
-const tdStyle = {
-  padding: "0.5rem",
-  borderBottom: "1px solid #eee",
+const celulaStyle = {
+  border: "1px solid #ccc",
+  padding: "0.75rem",
+  textAlign: "left",
 };
 
 const buttonStyle = {

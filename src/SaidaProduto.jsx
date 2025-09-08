@@ -136,7 +136,7 @@ const SaidaProduto = () => {
         ean: produtoInfo.ean,
         quantidade: quantidadeNum,
         lote: lote || null,
-        validade: estoqueSelecionado.validade, // ✅ Validade incluída no histórico
+        validade: estoqueSelecionado.validade,
         data_saida: new Date().toISOString(),
         usuario_email: usuarioEmail,
       };
@@ -203,7 +203,7 @@ const SaidaProduto = () => {
           />
           <input
             type="text"
-            placeholder="Lote (opcional)"
+            placeholder="Pedido (opcional)"
             value={lote}
             onChange={(e) => setLote(e.target.value)}
             style={{ marginBottom: "1rem", width: "100%" }}

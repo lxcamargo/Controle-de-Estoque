@@ -10,13 +10,13 @@ const HistoricoSaida = () => {
   useEffect(() => {
     const emailSalvo = localStorage.getItem("usuarioEmail");
     setUsuarioEmail(emailSalvo || "desconhecido@local");
-    carregarHistorico(); // 🔄 Carrega tudo inicialmente
+    carregarHistorico();
   }, []);
 
   useEffect(() => {
     const delayBusca = setTimeout(() => {
       carregarHistorico(eanFiltro);
-    }, 300); // ⏱️ Delay para evitar múltiplas chamadas
+    }, 300);
 
     return () => clearTimeout(delayBusca);
   }, [eanFiltro]);
@@ -39,18 +39,38 @@ const HistoricoSaida = () => {
         return;
       }
 
-      const registrosComFormatacao = saidaData.map((item) => {
-        const validadeFormatada = item.validade
-          ? item.validade.slice(0, 10).split("-").reverse().join("/")
-          : "—";
+      const registrosComDescricao = await Promise.all(
+        saidaData.map(async (item) => {
+          const validadeFormatada = item.validade
+            ? item.validade.slice(0, 10).split("-").reverse().join("/")
+            : "—";
 
-        return {
-          ...item,
-          validade_formatada: validadeFormatada
-        };
-      });
+          let descricao = "—";
+          let marca = "—";
 
-      setRegistros(registrosComFormatacao);
+          if (item.ean) {
+            const { data: produtoData, error: produtoError } = await supabase
+              .from("produto")
+              .select("descricao, marca")
+              .eq("ean", item.ean)
+              .single();
+
+            if (produtoData) {
+              descricao = produtoData.descricao || "—";
+              marca = produtoData.marca || "—";
+            }
+          }
+
+          return {
+            ...item,
+            validade_formatada: validadeFormatada,
+            descricao,
+            marca
+          };
+        })
+      );
+
+      setRegistros(registrosComDescricao);
     } catch (err) {
       console.error("❌ Erro inesperado:", err);
     }
@@ -64,6 +84,8 @@ const HistoricoSaida = () => {
 
     const dadosFormatados = registros.map((item) => ({
       EAN: item.ean,
+      Descrição: item.descricao || "—",
+      Marca: item.marca || "—",
       Quantidade: item.quantidade,
       Lote: item.lote || "-",
       "Data Saída": new Date(item.data_saida).toLocaleString("pt-BR", {
@@ -92,7 +114,6 @@ const HistoricoSaida = () => {
         Usuário logado: {usuarioEmail}
       </p>
 
-      {/* 🔍 Campo de filtro por EAN */}
       <div style={{ marginBottom: "1rem" }}>
         <input
           type="text"
@@ -111,21 +132,17 @@ const HistoricoSaida = () => {
             📁 Exportar para Excel
           </button>
 
-          <table style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontFamily: "Arial, sans-serif",
-            fontSize: "0.95rem",
-            marginTop: "1rem"
-          }}>
+          <table style={tabelaStyle}>
             <thead style={{ backgroundColor: "#f0f0f0" }}>
               <tr>
-                <th style={{ padding: "0.75rem", textAlign: "left" }}>📦 EAN</th>
-                <th style={{ padding: "0.75rem", textAlign: "center" }}>🔢 Quantidade</th>
-                <th style={{ padding: "0.75rem", textAlign: "center" }}>🏷️ Lote</th>
-                <th style={{ padding: "0.75rem", textAlign: "center" }}>📅 Data</th>
-                <th style={{ padding: "0.75rem", textAlign: "center" }}>📆 Validade</th>
-                <th style={{ padding: "0.75rem", textAlign: "left" }}>👤 Usuário</th>
+                <th style={celulaStyle}>📦 EAN</th>
+                <th style={celulaStyle}>📝 Descrição</th>
+                <th style={celulaStyle}>🏷️ Marca</th>
+                <th style={celulaStyle}>🔢 Quantidade</th>
+                <th style={celulaStyle}>📦 Pedido</th>
+                <th style={celulaStyle}>📅 Data</th>
+                <th style={celulaStyle}>📆 Validade</th>
+                <th style={celulaStyle}>👤 Usuário</th>
               </tr>
             </thead>
             <tbody>
@@ -133,14 +150,15 @@ const HistoricoSaida = () => {
                 <tr
                   key={item.id}
                   style={{
-                    backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9f9f9",
-                    borderBottom: "1px solid #ddd"
+                    backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9f9f9"
                   }}
                 >
-                  <td style={{ padding: "0.75rem" }}>{item.ean}</td>
-                  <td style={{ padding: "0.75rem", textAlign: "center" }}>{item.quantidade}</td>
-                  <td style={{ padding: "0.75rem", textAlign: "center" }}>{item.lote || "-"}</td>
-                  <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                  <td style={celulaStyle}>{item.ean}</td>
+                  <td style={celulaStyle}>{item.descricao}</td>
+                  <td style={celulaStyle}>{item.marca}</td>
+                  <td style={{ ...celulaStyle, textAlign: "center" }}>{item.quantidade}</td>
+                  <td style={{ ...celulaStyle, textAlign: "center" }}>{item.lote || "-"}</td>
+                  <td style={{ ...celulaStyle, textAlign: "center" }}>
                     {new Date(item.data_saida).toLocaleString("pt-BR", {
                       day: "2-digit",
                       month: "2-digit",
@@ -150,8 +168,8 @@ const HistoricoSaida = () => {
                       second: "2-digit"
                     })}
                   </td>
-                  <td style={{ padding: "0.75rem", textAlign: "center" }}>{item.validade_formatada}</td>
-                  <td style={{ padding: "0.75rem" }}>{item.usuario_email}</td>
+                  <td style={{ ...celulaStyle, textAlign: "center" }}>{item.validade_formatada}</td>
+                  <td style={celulaStyle}>{item.usuario_email}</td>
                 </tr>
               ))}
             </tbody>
@@ -160,6 +178,20 @@ const HistoricoSaida = () => {
       )}
     </div>
   );
+};
+
+const tabelaStyle = {
+  width: "100%",
+  borderCollapse: "collapse",
+  fontFamily: "Arial, sans-serif",
+  fontSize: "0.95rem",
+  marginTop: "1rem"
+};
+
+const celulaStyle = {
+  border: "1px solid #ccc",
+  padding: "0.75rem",
+  textAlign: "left"
 };
 
 export default HistoricoSaida;
