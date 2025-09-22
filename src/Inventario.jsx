@@ -6,47 +6,75 @@ const Inventario = () => {
   const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [historico, setHistorico] = useState([]);
 
-  // Carrega inventário inicial com última contagem registrada
   const carregarInventario = async () => {
-    const { data: inventario, error } = await supabase
-      .from('inventario')
-      .select('*')
-      .order('descricao', { ascending: true });
+    const { data: contagens, error: erroContagem } = await supabase
+      .from('contagens')
+      .select(`
+        ean,
+        validade,
+        quantidade,
+        ajustado,
+        data,
+        produto:produto_id (
+          descricao,
+          marca
+        )
+      `)
+      .order('data', { ascending: false });
 
-    if (error) {
-      console.error(error);
+    if (erroContagem) {
+      console.error("Erro ao buscar contagens:", erroContagem);
       return;
     }
 
-    const produtosComContagem = await Promise.all(
-      inventario.map(async (item) => {
-        const { data: ultimaContagem } = await supabase
-          .from('contagens')
-          .select('quantidade, contagem_num')
+    const agrupados = {};
+    for (const item of contagens) {
+      const chave = `${item.ean}_${item.validade}`;
+      if (!agrupados[chave]) agrupados[chave] = item;
+    }
+
+    const ultimasNaoAjustadas = Object.values(agrupados).filter(item => item.ajustado === false);
+
+    const produtosComSaldo = await Promise.all(
+      ultimasNaoAjustadas.map(async (item) => {
+        const { data: estoque, error: erroEstoque } = await supabase
+          .from('estoque')
+          .select('quantidade')
           .eq('ean', item.ean)
           .eq('validade', item.validade)
-          .order('data', { ascending: false })
           .limit(1)
           .single();
 
+        const saldo = estoque?.quantidade ?? null;
+        const status =
+          item.quantidade == null || saldo == null
+            ? 'Pendente'
+            : item.quantidade === saldo
+            ? 'OK'
+            : 'Divergente';
+
         return {
-          ...item,
-          ultimaContagemNum: ultimaContagem?.contagem_num ?? '-',
-          ultimaContagemQtd: ultimaContagem?.quantidade ?? '-'
+          ean: item.ean,
+          descricao: item.produto?.descricao ?? '—',
+          marca: item.produto?.marca ?? '—',
+          validade: item.validade,
+          quantidade: item.quantidade,
+          saldo,
+          status
         };
       })
     );
 
-    setProdutos(produtosComContagem);
+    setProdutos(produtosComSaldo);
   };
 
-  // Ajusta estoque com base na última contagem registrada
   const ajustarEstoque = async (produto) => {
     const { data: ultimaContagem, error: erroContagem } = await supabase
       .from('contagens')
       .select('quantidade')
       .eq('ean', produto.ean)
       .eq('validade', produto.validade)
+      .eq('ajustado', false)
       .order('data', { ascending: false })
       .limit(1)
       .single();
@@ -65,13 +93,26 @@ const Inventario = () => {
     if (erroEstoque) {
       alert('Erro ao ajustar estoque');
       console.error(erroEstoque);
-    } else {
-      alert('Estoque ajustado com sucesso!');
-      carregarInventario();
+      return;
     }
+
+    const { error: erroAtualizarContagens } = await supabase
+      .from('contagens')
+      .update({ ajustado: true })
+      .match({ ean: produto.ean, validade: produto.validade });
+
+    if (erroAtualizarContagens) {
+      alert('Erro ao marcar contagens como ajustadas');
+      console.error(erroAtualizarContagens);
+      return;
+    }
+
+    alert('✅ Estoque ajustado e item removido da tela!');
+    carregarInventario();
+    setProdutoSelecionado(null);
+    setHistorico([]);
   };
 
-  // Carrega histórico de contagens (sem filtro de status)
   const carregarHistorico = async (ean, validade) => {
     const { data, error } = await supabase
       .from('contagens')
@@ -88,7 +129,6 @@ const Inventario = () => {
     }
   };
 
-  // Escuta atualizações em tempo real
   useEffect(() => {
     carregarInventario();
 
@@ -97,7 +137,7 @@ const Inventario = () => {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'inventario'
+        table: 'contagens'
       }, payload => {
         console.log('Atualização recebida:', payload);
         carregarInventario();
@@ -110,16 +150,18 @@ const Inventario = () => {
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">📦 Tela de Inventário</h1>
-      <table className="table-auto w-full border">
-        <thead className="bg-gray-100">
+    <div style={{ padding: '2rem' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>📦 Tela de Inventário</h1>
+
+      <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead style={{ backgroundColor: '#f0f0f0' }}>
           <tr>
             <th>EAN</th>
             <th>Descrição</th>
+            <th>Marca</th>
             <th>Validade</th>
-            <th>Última Contagem Nº</th>
-            <th>Última Quantidade</th>
+            <th>Quantidade</th>
+            <th>Saldo</th>
             <th>Status</th>
             <th>Ajustar</th>
             <th>Histórico</th>
@@ -127,16 +169,29 @@ const Inventario = () => {
         </thead>
         <tbody>
           {produtos.map((p, index) => (
-            <tr key={index} className="text-center border-t">
+            <tr key={index}>
               <td>{p.ean}</td>
               <td>{p.descricao}</td>
+              <td>{p.marca}</td>
               <td>{p.validade}</td>
-              <td>{p.ultimaContagemNum}</td>
-              <td>{p.ultimaContagemQtd}</td>
-              <td>{p.status}</td>
+              <td>{p.quantidade ?? '—'}</td>
+              <td>{p.saldo ?? '—'}</td>
+              <td>
+                {p.status === 'OK' && <span>✅</span>}
+                {p.status === 'Divergente' && <span>⚠️</span>}
+                {p.status === 'Pendente' && <span>⏳</span>}
+                <span style={{ marginLeft: '0.5rem' }}>{p.status}</span>
+              </td>
               <td>
                 <button
-                  className="bg-green-600 text-white px-3 py-1 rounded"
+                  style={{
+                    backgroundColor: '#28a745',
+                    color: '#fff',
+                    padding: '0.3rem 0.6rem',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
                   onClick={() => ajustarEstoque(p)}
                 >
                   Ajustar Estoque
@@ -144,7 +199,14 @@ const Inventario = () => {
               </td>
               <td>
                 <button
-                  className="bg-gray-600 text-white px-3 py-1 rounded"
+                  style={{
+                    backgroundColor: '#6c757d',
+                    color: '#fff',
+                    padding: '0.3rem 0.6rem',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
                   onClick={() => carregarHistorico(p.ean, p.validade)}
                 >
                   Ver Histórico
@@ -155,16 +217,30 @@ const Inventario = () => {
         </tbody>
       </table>
 
-      {/* Modal de Histórico */}
       {produtoSelecionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-2xl">
-            <h2 className="text-xl font-bold mb-4">📋 Histórico de Contagens</h2>
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '2rem',
+            borderRadius: '8px',
+            boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+            width: '100%',
+            maxWidth: '800px'
+          }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>📋 Histórico de Contagens</h2>
             <p><strong>EAN:</strong> {produtoSelecionado.ean}</p>
             <p><strong>Validade:</strong> {produtoSelecionado.validade}</p>
 
-            <table className="table-auto w-full mt-4 border">
-              <thead className="bg-gray-100">
+            <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+              <thead style={{ backgroundColor: '#f0f0f0' }}>
                 <tr>
                   <th>Contagem Nº</th>
                   <th>Quantidade</th>
@@ -175,19 +251,27 @@ const Inventario = () => {
               </thead>
               <tbody>
                 {historico.map((item, index) => (
-                  <tr key={index} className="text-center border-t">
+                  <tr key={index}>
                     <td>{item.contagem_num}</td>
                     <td>{item.quantidade}</td>
-                    <td>{item.usuario}</td>
-                    <td>{new Date(item.data).toLocaleString()}</td>
-                    <td>{item.status}</td>
+                    <td>{item.usuario ?? '—'}</td>
+                    <td>{item.data}</td>
+                    <td>{item.status ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             <button
-              className="mt-6 bg-red-600 text-white px-4 py-2 rounded"
+              style={{
+                marginTop: '1.5rem',
+                backgroundColor: '#dc3545',
+                color: '#fff',
+                padding: '0.5rem 1rem',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
               onClick={() => setProdutoSelecionado(null)}
             >
               Fechar

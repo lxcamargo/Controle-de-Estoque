@@ -1,3 +1,15 @@
+/* 🌄 Fundo aplicado ao body */
+body {
+  background-image: url('/fundo.jpg'); /* imagem dentro da pasta public */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  margin: 0;
+  padding: 0;
+}
+
+/* Estilos existentes mantidos */
 #root {
   max-width: 1280px;
   margin: 0 auto;

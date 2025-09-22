@@ -23,9 +23,26 @@ export default function HistoricoContagens() {
   const carregarDados = async (ean = "") => {
     setLoading(true);
     try {
+      // 🔥 Exclui contagens ajustadas do banco
+      await supabase
+        .from("contagens")
+        .delete()
+        .eq("ajustado", true);
+
       let query = supabase
         .from("contagens")
-        .select("*")
+        .select(`
+          ean,
+          validade,
+          quantidade,
+          data,
+          usuario_email,
+          ajustado,
+          produto:produto_id (
+            descricao,
+            marca
+          )
+        `)
         .order("data", { ascending: false });
 
       if (ean.trim() !== "") {
@@ -52,8 +69,8 @@ export default function HistoricoContagens() {
 
     const dadosFormatados = contagens.map((item) => ({
       EAN: item.ean,
-      Nome: item.nome,
-      Marca: item.marca,
+      Nome: item.produto?.descricao || "—",
+      Marca: item.produto?.marca || "—",
       Validade: item.validade
         ? new Date(item.validade + "T00:00:00").toLocaleDateString("pt-BR")
         : "—",
@@ -61,7 +78,8 @@ export default function HistoricoContagens() {
         ? new Date(item.data).toLocaleString("pt-BR")
         : "—",
       Quantidade: item.quantidade,
-      Usuário: item.usuario_id || "—"
+      Usuário: item.usuario_email || "—",
+      Ajustado: item.ajustado ? "Sim" : "Não"
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);
@@ -70,6 +88,23 @@ export default function HistoricoContagens() {
 
     XLSX.writeFile(workbook, "historico_contagens.xlsx");
   };
+
+  const totaisEmAberto = Object.values(
+    contagens.reduce((acc, item) => {
+      const chave = `${item.ean}_${item.validade}`;
+      if (!acc[chave]) {
+        acc[chave] = {
+          ean: item.ean,
+          validade: item.validade,
+          descricao: item.produto?.descricao || "—",
+          marca: item.produto?.marca || "—",
+          quantidade: 0
+        };
+      }
+      acc[chave].quantidade += item.quantidade;
+      return acc;
+    }, {})
+  );
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -94,11 +129,29 @@ export default function HistoricoContagens() {
 
       {!loading && !erro && contagens.length > 0 && (
         <>
-          <button onClick={exportarHistoricoParaExcel} style={{ marginBottom: "1rem" }}>
+          <button
+            onClick={exportarHistoricoParaExcel}
+            style={{
+              marginBottom: "1rem",
+              padding: "0.5rem 1rem",
+              backgroundColor: "#007BFF",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer"
+            }}
+          >
             📤 Exportar Histórico para Excel
           </button>
 
-          <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table
+            border="1"
+            cellPadding="8"
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginBottom: "2rem"
+            }}
+          >
             <thead style={{ backgroundColor: "#f0f0f0" }}>
               <tr>
                 <th>EAN</th>
@@ -108,14 +161,15 @@ export default function HistoricoContagens() {
                 <th>Data Contagem</th>
                 <th>Quantidade</th>
                 <th>Usuário</th>
+                <th>Ajustado</th>
               </tr>
             </thead>
             <tbody>
               {contagens.map((item, index) => (
                 <tr key={index}>
                   <td>{item.ean}</td>
-                  <td>{item.nome}</td>
-                  <td>{item.marca}</td>
+                  <td>{item.produto?.descricao || "—"}</td>
+                  <td>{item.produto?.marca || "—"}</td>
                   <td>
                     {item.validade
                       ? new Date(item.validade + "T00:00:00").toLocaleDateString("pt-BR")
@@ -127,7 +181,38 @@ export default function HistoricoContagens() {
                       : "—"}
                   </td>
                   <td>{item.quantidade}</td>
-                  <td>{item.usuario_id || "—"}</td>
+                  <td>{item.usuario_email || "—"}</td>
+                  <td style={{ textAlign: "center" }}>
+                    {item.ajustado ? "✅" : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h3>📊 Totais em aberto por item</h3>
+          <table
+            border="1"
+            cellPadding="8"
+            style={{ width: "100%", borderCollapse: "collapse" }}
+          >
+            <thead style={{ backgroundColor: "#f0f0f0" }}>
+              <tr>
+                <th>EAN</th>
+                <th>Validade</th>
+                <th>Nome</th>
+                <th>Marca</th>
+                <th>Quantidade em aberto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {totaisEmAberto.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.ean}</td>
+                  <td>{item.validade}</td>
+                  <td>{item.descricao}</td>
+                  <td>{item.marca}</td>
+                  <td>{item.quantidade}</td>
                 </tr>
               ))}
             </tbody>

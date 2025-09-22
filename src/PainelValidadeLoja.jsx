@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import * as XLSX from "xlsx";
 
-export default function PainelValidade() {
-  const [estoque, setEstoque] = useState([]);
-  const [produtos, setProdutos] = useState([]);
+export default function PainelValidadeLoja() {
+  const [estoqueLoja, setEstoqueLoja] = useState([]);
   const [erro, setErro] = useState(null);
 
   const [filtroEAN, setFiltroEAN] = useState("");
@@ -15,22 +14,16 @@ export default function PainelValidade() {
 
   useEffect(() => {
     const carregarDados = async () => {
-      const { data: dadosEstoque, error: erroEstoque } = await supabase
-        .from("estoque")
+      const { data, error } = await supabase
+        .from("estoque_loja")
         .select("*")
         .gt("quantidade", 0);
 
-      const { data: dadosProdutos, error: erroProdutos } = await supabase
-        .from("produto")
-        .select("*");
-
-      if (erroEstoque || erroProdutos) {
+      if (error) {
         setErro("Erro ao carregar dados.");
-        setEstoque([]);
-        setProdutos([]);
+        setEstoqueLoja([]);
       } else {
-        setEstoque(dadosEstoque);
-        setProdutos(dadosProdutos);
+        setEstoqueLoja(data);
         setErro(null);
       }
     };
@@ -38,17 +31,16 @@ export default function PainelValidade() {
     carregarDados();
   }, []);
 
-  const dadosOrdenados = estoque
+  const dadosOrdenados = estoqueLoja
     .map(item => {
-      const produto = produtos.find(p => p.id_produto === item.id_produto);
       const validadeDate = item.validade
         ? new Date(item.validade + "T00:00:00")
         : null;
 
       return {
-        ean: produto?.ean || "—",
-        descricao: produto?.descricao || "—",
-        marca: produto?.marca || "—",
+        ean: item.ean || "—",
+        descricao: item.nome || "—",
+        marca: item.marca || "—",
         quantidade: item.quantidade || 0,
         validade: validadeDate
           ? validadeDate.toLocaleDateString("pt-BR")
@@ -107,14 +99,14 @@ export default function PainelValidade() {
 
     const worksheet = XLSX.utils.json_to_sheet(dadosParaExportar);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Validades");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Validades Loja");
 
-    XLSX.writeFile(workbook, "painel-validade.xlsx");
+    XLSX.writeFile(workbook, "painel-validade-loja.xlsx");
   };
 
   const anosDisponiveis = Array.from(
     new Set(
-      estoque
+      estoqueLoja
         .map(item => item.validade)
         .filter(Boolean)
         .map(data => {
@@ -125,9 +117,12 @@ export default function PainelValidade() {
     )
   ).sort((a, b) => a - b);
 
+  const saldoTotal = dadosFiltrados.reduce((acc, item) => acc + item.quantidade, 0);
+  const eansUnicos = new Set(dadosFiltrados.map(item => item.ean)).size;
+
   return (
     <div style={{ padding: "2rem" }}>
-      <h2>📊 Painel de Validade</h2>
+      <h2>🏬 Painel de Validade da Loja</h2>
       <p style={{ fontStyle: "italic", marginBottom: "1rem" }}>
         Produtos ordenados por vencimento. Cores indicam faixas de atenção:
         <br />
@@ -137,7 +132,7 @@ export default function PainelValidade() {
         <span style={{ color: "#4caf50" }}>🟢 +180 dias</span>
       </p>
 
-      {/* 📦 Cartões de resumo (dinâmicos e mais compactos) */}
+      {/* 🧮 Cartões compactos com dados dinâmicos */}
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         <div style={{
           backgroundColor: "#f0f4f8",
@@ -149,7 +144,7 @@ export default function PainelValidade() {
         }}>
           <h4 style={{ margin: 0, fontSize: "1rem" }}>📦 Saldo Total</h4>
           <p style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#2e7d32", margin: 0 }}>
-            {dadosFiltrados.reduce((acc, item) => acc + item.quantidade, 0)}
+            {saldoTotal}
           </p>
         </div>
         <div style={{
@@ -162,7 +157,7 @@ export default function PainelValidade() {
         }}>
           <h4 style={{ margin: 0, fontSize: "1rem" }}>🔢 EANs Únicos</h4>
           <p style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#2e7d32", margin: 0 }}>
-            {new Set(dadosFiltrados.map(item => item.ean)).size}
+            {eansUnicos}
           </p>
         </div>
       </div>

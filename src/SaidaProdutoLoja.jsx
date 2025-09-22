@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
-const SaidaProduto = () => {
+const SaidaProdutoLoja = () => {
   const [ean, setEan] = useState("");
   const [quantidade, setQuantidade] = useState("");
   const [lote, setLote] = useState("");
@@ -23,12 +23,12 @@ const SaidaProduto = () => {
         .single();
 
       if (error || !data) {
-        alert("Produto não encontrado.");
+        const cadastrar = window.confirm("Produto não cadastrado. Deseja cadastrá-lo?");
+        if (cadastrar) {
+          navigate("/cadastro-dinamico", { state: { ean } });
+        }
       } else {
-        setProdutoInfo({
-          ...data,
-          id: data.id_produto,
-        });
+        setProdutoInfo({ ...data, id: data.id_produto });
       }
     } catch (err) {
       console.error("Erro ao buscar produto:", err);
@@ -36,7 +36,7 @@ const SaidaProduto = () => {
     }
   };
 
-  const registrarSaida = async () => {
+  const registrarSaidaLoja = async () => {
     setMensagem("");
 
     if (!produtoInfo || !produtoInfo.id) {
@@ -55,52 +55,33 @@ const SaidaProduto = () => {
       return;
     }
 
-    const [ano, mes, dia] = validade.split("-");
-    const validadeFormatada = `${ano}-${mes}-${dia}`;
-    const validadeDate = new Date(`${ano}-${mes}-${dia}T00:00:00`);
-
-    if (isNaN(validadeDate.getTime())) {
-      alert("Data de validade inválida.");
-      return;
-    }
+    const validadeFormatada = new Date(validade).toISOString().split("T")[0];
 
     const { data: estoques, error: erroEstoque } = await supabase
-      .from("estoque")
-      .select("id, quantidade, validade, id_produto")
+      .from("estoque_loja")
+      .select("id, quantidade, validade, id_produto, ean")
       .eq("id_produto", produtoInfo.id)
-      .order("validade", { ascending: true });
+      .eq("ean", ean.trim());
 
     if (erroEstoque) {
-      console.error("Erro ao consultar estoques:", erroEstoque.message || erroEstoque);
-      alert("Erro ao verificar estoque.");
+      alert("Erro ao verificar estoque da loja.");
       return;
     }
 
-    if (!estoques || estoques.length === 0) {
-      alert("Nenhum estoque encontrado para este produto.");
-      return;
-    }
-
-    const validadePendente = estoques.find((item) => {
-      const estoqueValidade = typeof item.validade === "string"
-        ? item.validade.slice(0, 10)
-        : new Date(item.validade).toISOString().slice(0, 10);
-      return estoqueValidade < validadeFormatada && item.quantidade > 0;
+    // 🔒 Verifica se há saldo em validade anterior
+    const validadeMaisAntigaComSaldo = estoques.find(item => {
+      const validadeItem = item.validade?.split("T")[0];
+      return validadeItem < validadeFormatada && item.quantidade > 0;
     });
 
-    if (validadePendente) {
-      const pendenteFormatada = typeof validadePendente.validade === "string"
-        ? validadePendente.validade.slice(0, 10).split("-").reverse().join("/")
-        : new Date(validadePendente.validade).toISOString().slice(0, 10).split("-").reverse().join("/");
-
-      alert(`Ainda há saldo do lote com validade ${pendenteFormatada}. É necessário dar baixa nesse lote primeiro.`);
+    if (validadeMaisAntigaComSaldo) {
+      const validadeBloqueada = validadeMaisAntigaComSaldo.validade?.split("T")[0].split("-").reverse().join("/");
+      alert(`⚠️ Existe saldo disponível com validade anterior (${validadeBloqueada}). Você só pode dar saída em produtos com validade mais longa quando o saldo da mais próxima estiver zerado.`);
       return;
     }
 
     const estoqueSelecionado = estoques.find((item) => {
-      const estoqueValidade = typeof item.validade === "string"
-        ? item.validade.slice(0, 10)
-        : new Date(item.validade).toISOString().slice(0, 10);
+      const estoqueValidade = item.validade?.split("T")[0];
       return estoqueValidade === validadeFormatada;
     });
 
@@ -120,103 +101,43 @@ const SaidaProduto = () => {
       ean: produtoInfo.ean,
       quantidade: quantidadeNum,
       lote: lote || null,
-      validade: validadeDate.toISOString(),
+      validade: estoqueSelecionado.validade,
       data_saida: new Date().toISOString(),
     };
 
     try {
-      const { error: erroSaida } = await supabase.from("saida").insert([dadosSaida]);
+      const { error: erroSaida } = await supabase
+        .from("saida_loja")
+        .insert([dadosSaida]);
 
       if (erroSaida) {
-        console.error("❌ Erro ao registrar saída:", erroSaida);
         alert("Não foi possível registrar a saída.");
         return;
       }
 
       const usuarioEmail = localStorage.getItem("usuarioEmail") || "desconhecido@local";
       const dadosHistorico = {
-        id_produto: produtoInfo.id,
-        ean: produtoInfo.ean,
-        quantidade: quantidadeNum,
-        lote: lote || null,
-        validade: estoqueSelecionado.validade,
-        data_saida: new Date().toISOString(),
+        ...dadosSaida,
         usuario_email: usuarioEmail,
       };
 
       const { error: erroHistorico } = await supabase
-        .from("saida_historico")
+        .from("saida_loja_historico")
         .insert([dadosHistorico]);
 
       if (erroHistorico) {
-        console.error("❌ Erro ao registrar no histórico:", erroHistorico);
-        alert("Saída registrada, mas não foi possível salvar no histórico.");
+        console.warn("Saída registrada, mas falhou ao salvar no histórico:", erroHistorico);
       }
 
       const novaQuantidade = estoqueSelecionado.quantidade - quantidadeNum;
       const { error: erroAtualizacao } = await supabase
-        .from("estoque")
+        .from("estoque_loja")
         .update({ quantidade: novaQuantidade })
         .eq("id", estoqueSelecionado.id);
 
       if (erroAtualizacao) {
-        console.error("❌ Erro ao atualizar quantidade:", erroAtualizacao);
         alert("Saída registrada, mas não foi possível atualizar o estoque.");
         return;
-      }
-
-      // 🔄 Atualização do estoque da loja
-      try {
-        const dataEntrada = new Date().toISOString();
-
-        const { data: estoqueLoja, error: erroLoja } = await supabase
-          .from("estoque_loja")
-          .select("*")
-          .eq("id_produto", produtoInfo.id)
-          .eq("ean", produtoInfo.ean);
-
-        if (erroLoja) {
-          console.error("❌ Erro ao consultar estoque da loja:", erroLoja);
-        } else {
-          const linhaExistente = estoqueLoja.find(item => {
-            const validadeBanco = item.validade?.split("T")[0];
-            return validadeBanco === validadeFormatada;
-          });
-
-          if (linhaExistente) {
-            const novaQuantidadeLoja = linhaExistente.quantidade + quantidadeNum;
-
-            const { error: erroUpdateLoja } = await supabase
-              .from("estoque_loja")
-              .update({ quantidade: novaQuantidadeLoja })
-              .eq("id", linhaExistente.id);
-
-            if (erroUpdateLoja) {
-              console.error("❌ Erro ao atualizar estoque da loja:", erroUpdateLoja);
-            }
-          } else {
-            const novaLinhaLoja = {
-              id_produto: produtoInfo.id,
-              ean: produtoInfo.ean,
-              nome: produtoInfo.descricao,
-              marca: produtoInfo.marca,
-              validade: validadeFormatada,
-              quantidade: quantidadeNum,
-              lote: lote || null,
-              data_entrada: dataEntrada
-            };
-
-            const { error: erroInsertLoja } = await supabase
-              .from("estoque_loja")
-              .insert([novaLinhaLoja]);
-
-            if (erroInsertLoja) {
-              console.error("❌ Erro ao criar nova linha na loja:", erroInsertLoja);
-            }
-          }
-        }
-      } catch (errLoja) {
-        console.error("❌ Erro inesperado ao atualizar estoque da loja:", errLoja);
       }
 
       setMensagem("✅ Saída registrada e estoque atualizado com sucesso!");
@@ -228,14 +149,14 @@ const SaidaProduto = () => {
         setValidade('');
       }, 1500);
     } catch (err) {
-      console.error("❌ Erro inesperado ao registrar saída:", err);
+      console.error("Erro inesperado ao registrar saída:", err);
       alert("Erro inesperado ao registrar saída.");
     }
   };
 
   return (
     <div style={{ padding: "2rem" }}>
-      <h2>📤 Registrar Saída de Produto</h2>
+      <h2>📤 Saída de Produto da Loja</h2>
 
       <input
         type="text"
@@ -272,7 +193,7 @@ const SaidaProduto = () => {
             onChange={(e) => setValidade(e.target.value)}
             style={{ marginBottom: "1rem", width: "100%" }}
           />
-          <button onClick={registrarSaida}>Confirmar Saída</button>
+          <button onClick={registrarSaidaLoja}>Confirmar Saída</button>
         </div>
       )}
 
@@ -285,4 +206,4 @@ const SaidaProduto = () => {
   );
 };
 
-export default SaidaProduto;
+export default SaidaProdutoLoja;

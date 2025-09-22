@@ -10,24 +10,16 @@ const TelaContagem = () => {
   const [quantidade, setQuantidade] = useState("");
   const [validades, setValidades] = useState([]);
   const [usuarioEmail, setUsuarioEmail] = useState("");
+  const [produtoId, setProdutoId] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
 
   useEffect(() => {
-    const carregarUsuario = async () => {
-      const { data, error } = await supabase
-        .from("cadastro_user")
-        .select("usuario_email")
-        .eq("id", 1)
-        .single();
-
-      if (data) {
-        setUsuarioEmail(data.usuario_email);
-      } else {
-        console.error("Erro ao buscar usuário:", error);
-      }
-    };
-
-    carregarUsuario();
+    const emailLocal = localStorage.getItem("usuarioEmail");
+    if (emailLocal) {
+      setUsuarioEmail(emailLocal);
+    } else {
+      console.error("Email do usuário não encontrado no localStorage.");
+    }
   }, []);
 
   const buscarProdutoPorEAN = async () => {
@@ -38,20 +30,31 @@ const TelaContagem = () => {
     }
 
     try {
-      const { data: estoques, error } = await supabase
-        .from("estoque")
-        .select("quantidade, validade, nome, marca")
-        .eq("ean", eanLimpo)
-        .gt("quantidade", 0);
+      const { data: produtos, error: erroProduto } = await supabase
+        .from("produto")
+        .select("id_produto, descricao, marca")
+        .eq("ean", eanLimpo);
 
-      if (error || !estoques || estoques.length === 0) {
-        alert("Produto não encontrado ou sem saldo disponível.");
+      if (erroProduto || !produtos || produtos.length === 0) {
+        alert("Produto não encontrado na tabela 'produto'.");
         return;
       }
 
-      const primeiro = estoques.find((item) => item.nome && item.marca) || estoques[0];
-      setDescricao(primeiro.nome);
-      setMarca(primeiro.marca);
+      const produto = produtos[0];
+      setDescricao(produto.descricao);
+      setMarca(produto.marca);
+      setProdutoId(produto.id_produto);
+
+      const { data: estoques, error: erroEstoque } = await supabase
+        .from("estoque")
+        .select("validade")
+        .eq("ean", eanLimpo)
+        .gt("quantidade", 0);
+
+      if (erroEstoque) {
+        console.error("Erro ao buscar validades:", erroEstoque);
+        return;
+      }
 
       const validadesUnicas = Array.from(
         new Set(
@@ -70,37 +73,78 @@ const TelaContagem = () => {
   };
 
   const registrarContagem = async () => {
-    if (!ean || !validade || !quantidade) {
-      alert("Preencha todos os campos antes de registrar.");
+    const quantidadeNum = Number(quantidade);
+    const validadeFormatada = validade?.slice(0, 10);
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const produtoIdValido = uuidRegex.test(produtoId);
+
+    if (
+      !ean?.trim() ||
+      !validadeFormatada ||
+      !usuarioEmail?.trim() ||
+      !produtoIdValido ||
+      isNaN(quantidadeNum) ||
+      quantidadeNum <= 0
+    ) {
+      alert("Preencha todos os campos corretamente antes de registrar.");
       return;
     }
 
-    const nomeSeguro = descricao ?? "Desconhecido";
-    const marcaSegura = marca ?? "Desconhecida";
-
     try {
-      await supabase.from("contagens").insert([
-        {
-          ean,
-          nome: nomeSeguro,
-          marca: marcaSegura,
-          validade,
-          quantidade: Number(quantidade),
-          data: new Date().toISOString(),
-          usuario: usuarioEmail,
-          status: "registrada",
-        },
-      ]);
+      const { data: existente, error: erroBusca } = await supabase
+        .from("contagens")
+        .select("id, quantidade")
+        .eq("ean", ean)
+        .eq("validade", validadeFormatada)
+        .eq("produto_id", produtoId)
+        .eq("usuario_email", usuarioEmail)
+        .limit(1);
 
-      setMensagemSucesso("✅ Contagem registrada com sucesso!");
+      if (erroBusca) throw erroBusca;
+
+      if (existente && existente.length > 0) {
+        const contagemExistente = existente[0];
+        const novaQuantidade = contagemExistente.quantidade + quantidadeNum;
+
+        const { error: erroUpdate } = await supabase
+          .from("contagens")
+          .update({ quantidade: novaQuantidade })
+          .eq("id", contagemExistente.id);
+
+        if (erroUpdate) throw erroUpdate;
+
+        setMensagemSucesso("🔁 Contagem atualizada com sucesso!");
+      } else {
+        const dadosContagem = {
+          ean,
+          validade: validadeFormatada,
+          quantidade: quantidadeNum,
+          data: new Date().toISOString(),
+          usuario_email: usuarioEmail,
+          produto_id: produtoId
+        };
+
+        const { error: erroInsert } = await supabase
+          .from("contagens")
+          .insert([dadosContagem]);
+
+        if (erroInsert) throw erroInsert;
+
+        setMensagemSucesso("✅ Contagem registrada com sucesso!");
+      }
+
       setEan("");
       setDescricao("");
       setMarca("");
       setValidade("");
       setQuantidade("");
       setValidades([]);
+      setProdutoId("");
 
-      setTimeout(() => setMensagemSucesso(""), 3000);
+      setTimeout(() => {
+        setMensagemSucesso("");
+      }, 3000);
     } catch (err) {
       console.error("Erro ao registrar contagem:", err);
       alert("Erro ao registrar contagem.");
@@ -126,7 +170,6 @@ const TelaContagem = () => {
         }}
       />
 
-      {/* Campo EAN manual */}
       <div style={{ marginTop: "1rem", marginBottom: "1rem" }}>
         <label>
           <strong>EAN manual:</strong>
@@ -183,7 +226,6 @@ const TelaContagem = () => {
         </div>
       )}
 
-      {/* Campo de quantidade fixo */}
       <div style={{ marginTop: "2rem" }}>
         <label>
           <strong>Quantidade:</strong>

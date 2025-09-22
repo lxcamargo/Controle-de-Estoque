@@ -48,9 +48,10 @@ export default function Login() {
         return;
       }
 
-      // ✅ Limpa e salva o e-mail do usuário logado no localStorage
+      // ✅ Salva dados no localStorage
       localStorage.removeItem("usuarioEmail");
       localStorage.setItem("usuarioEmail", usuario.email);
+      localStorage.setItem("tipoUsuario", usuario.tipo?.toLowerCase()); // ← compatível com adm_loja e adm_galpao
       console.log("🔐 Login realizado por:", usuario.email);
 
       // ✅ Redirecionamento universal para dashboard

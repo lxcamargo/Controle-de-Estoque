@@ -1,3 +1,40 @@
+/* ✅ Borda azul em volta da tela inteira */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  border: 6px solid #2196f3;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  position: relative; /* necessário para posicionamento absoluto do título */
+}
+
+/* ✅ Camada semitransparente para legibilidade */
+.overlay {
+  background-color: rgba(255, 255, 255, 0.85); /* branco com 85% opacidade */
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 1280px;
+  margin: 2rem auto;
+}
+
+/* ✅ Título centralizado no meio da tela */
+.titulo-centralizado {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #2196f3;
+  color: white;
+  padding: 1rem 2rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+/* Estilos existentes mantidos */
 .dashboard-container {
   padding: 20px;
   max-width: 1000px;

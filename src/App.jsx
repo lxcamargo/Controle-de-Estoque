@@ -19,6 +19,14 @@ import HistoricoContagens from "./HistoricoContagens.jsx";
 import EditarProduto from "./EditarProduto.jsx";
 import TelaContagem from "./TelaContagem.jsx";
 
+// ✅ Novos componentes da Loja
+import EntradaProdutoLoja from "./EntradaProdutoLoja.jsx";
+import EstoqueLoja from "./EstoqueLoja.jsx";
+import ImportarEstoqueLoja from "./ImportarEstoqueLoja.jsx";
+import SaidaProdutoLoja from "./SaidaProdutoLoja.jsx";
+import PainelValidadeLoja from "./PainelValidadeLoja.jsx";
+import HistoricoSaidaLoja from "./HistoricoSaidaLoja.jsx"; // ✅ Novo import
+
 function CadastroProduto() {
   const location = useLocation();
   const eanRecebido = location.state?.ean || "";
@@ -47,7 +55,7 @@ function LoginWrapper() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const usuarioAutenticado = localStorage.getItem("usuarioLogado"); // ou outro critério
+    const usuarioAutenticado = localStorage.getItem("usuarioLogado");
     if (usuarioAutenticado) {
       navigate("/dashboard");
     }
@@ -79,6 +87,15 @@ export default function App() {
         <Route path="/inventario" element={<Inventario />} />
         <Route path="/historico-contagens" element={<HistoricoContagens />} />
         <Route path="/contagem" element={<TelaContagem />} />
+
+        {/* ✅ Rotas exclusivas da Loja */}
+        <Route path="/entrada-produto-loja" element={<EntradaProdutoLoja />} />
+        <Route path="/saida-produto-loja" element={<SaidaProdutoLoja />} />
+        <Route path="/estoque-loja" element={<EstoqueLoja />} />
+        <Route path="/importar-estoque-loja" element={<ImportarEstoqueLoja />} />
+        <Route path="/painel-validade-loja" element={<PainelValidadeLoja />} />
+        <Route path="/historico-saidas-loja" element={<HistoricoSaidaLoja />} /> {/* ✅ Nova rota adicionada */}
+
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>
     </BrowserRouter>
