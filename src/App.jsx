@@ -25,7 +25,10 @@ import EstoqueLoja from "./EstoqueLoja.jsx";
 import ImportarEstoqueLoja from "./ImportarEstoqueLoja.jsx";
 import SaidaProdutoLoja from "./SaidaProdutoLoja.jsx";
 import PainelValidadeLoja from "./PainelValidadeLoja.jsx";
-import HistoricoSaidaLoja from "./HistoricoSaidaLoja.jsx"; // ✅ Novo import
+import HistoricoSaidaLoja from "./HistoricoSaidaLoja.jsx";
+
+// ✅ Novo componente para movimentações galpão → loja
+import MovimentacoesGalpaoLoja from "./MovimentacoesGalpaoLoja.jsx";
 
 function CadastroProduto() {
   const location = useLocation();
@@ -94,7 +97,10 @@ export default function App() {
         <Route path="/estoque-loja" element={<EstoqueLoja />} />
         <Route path="/importar-estoque-loja" element={<ImportarEstoqueLoja />} />
         <Route path="/painel-validade-loja" element={<PainelValidadeLoja />} />
-        <Route path="/historico-saidas-loja" element={<HistoricoSaidaLoja />} /> {/* ✅ Nova rota adicionada */}
+        <Route path="/historico-saidas-loja" element={<HistoricoSaidaLoja />} />
+
+        {/* ✅ Nova rota para movimentações entre setores */}
+        <Route path="/movimentacoes-galpao-loja" element={<MovimentacoesGalpaoLoja />} />
 
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>

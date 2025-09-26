@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "./supabaseClient";
+import * as XLSX from "xlsx"; // ✅ Biblioteca para exportar Excel
 
 const ProdutosCadastrados = () => {
   const location = useLocation();
@@ -67,6 +68,20 @@ const ProdutosCadastrados = () => {
     }
   };
 
+  const exportarParaExcel = () => {
+    const dadosExportacao = produtosFiltrados.map((produto) => ({
+      EAN: produto.ean,
+      Descrição: produto.descricao,
+      Marca: produto.marca,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dadosExportacao);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Produtos");
+
+    XLSX.writeFile(workbook, "produtos_cadastrados.xlsx");
+  };
+
   return (
     <div style={{ padding: "2rem" }}>
       <h2>📋 Produtos Cadastrados</h2>
@@ -86,6 +101,18 @@ const ProdutosCadastrados = () => {
           maxWidth: "400px",
         }}
       />
+
+      <button
+        onClick={exportarParaExcel}
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#4CAF50",
+          color: "white",
+          marginBottom: "1rem",
+        }}
+      >
+        📤 Exportar para Excel
+      </button>
 
       {loading ? (
         <p>Carregando produtos...</p>

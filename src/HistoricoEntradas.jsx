@@ -8,16 +8,14 @@ export default function HistoricoEntradas() {
   const [erro, setErro] = useState(null);
   const [eanFiltro, setEanFiltro] = useState("");
 
-  // 🔄 Carrega tudo inicialmente
   useEffect(() => {
     carregarDados();
   }, []);
 
-  // 🔍 Recarrega ao mudar o EAN
   useEffect(() => {
     const delayBusca = setTimeout(() => {
       carregarDados(eanFiltro);
-    }, 300); // pequeno delay para evitar múltiplas chamadas
+    }, 300);
 
     return () => clearTimeout(delayBusca);
   }, [eanFiltro]);
@@ -25,9 +23,15 @@ export default function HistoricoEntradas() {
   const carregarDados = async (ean = "") => {
     setLoading(true);
     try {
+      const hoje = new Date();
+      const limite = new Date();
+      limite.setDate(hoje.getDate() - 15);
+
       let query = supabase
         .from("entrada_historico_completo")
         .select("*")
+        .gte("data_entrada", limite.toISOString())
+        .lte("data_entrada", hoje.toISOString())
         .order("data_entrada", { ascending: false });
 
       if (ean.trim() !== "") {
@@ -78,7 +82,6 @@ export default function HistoricoEntradas() {
     <div style={{ padding: "2rem" }}>
       <h2>📋 Histórico de Entradas</h2>
 
-      {/* 🔍 Campo de filtro por EAN */}
       <div style={{ marginBottom: "1rem" }}>
         <input
           type="text"

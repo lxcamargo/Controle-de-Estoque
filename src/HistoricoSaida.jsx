@@ -23,9 +23,15 @@ const HistoricoSaida = () => {
 
   const carregarHistorico = async (ean = "") => {
     try {
+      const hoje = new Date();
+      const limite = new Date();
+      limite.setDate(hoje.getDate() - 15);
+
       let query = supabase
         .from("saida_historico")
         .select("*")
+        .gte("data_saida", limite.toISOString())
+        .lte("data_saida", hoje.toISOString())
         .order("data_saida", { ascending: false });
 
       if (ean.trim() !== "") {

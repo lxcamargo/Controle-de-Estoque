@@ -131,6 +131,19 @@ const Dashboard = () => {
                   >
                     📤 Histórico de Saídas - Loja
                   </button>
+
+                  {/* ✅ Novo botão para acessar a tela de movimentações */}
+                  <button
+                    onClick={() => abrirEmNovaAba("/movimentacoes-galpao-loja")}
+                    style={{
+                      ...estiloBotaoRelatorio,
+                      backgroundColor: "#e3f2fd",
+                      borderColor: "#42a5f5",
+                      color: "#1565c0"
+                    }}
+                  >
+                    🔄 Movimentações Galpão → Loja
+                  </button>
                 </div>
               </section>
             </>

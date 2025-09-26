@@ -85,7 +85,7 @@ const TelaContagem = () => {
       !usuarioEmail?.trim() ||
       !produtoIdValido ||
       isNaN(quantidadeNum) ||
-      quantidadeNum <= 0
+      quantidadeNum < 0 // ✅ agora aceita 0 como válido
     ) {
       alert("Preencha todos os campos corretamente antes de registrar.");
       return;
