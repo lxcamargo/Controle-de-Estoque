@@ -27,10 +27,6 @@ const MovimentacoesGalpaoLoja = () => {
         .select("*")
         .order("data_saida", { ascending: false });
 
-      // ⚠️ Removido temporariamente os filtros para teste
-      // .eq("origem", "galpao")
-      // .eq("destino", "loja")
-
       if (ean.trim() !== "") {
         query = query.eq("ean", ean.trim());
       }
@@ -102,6 +98,7 @@ const MovimentacoesGalpaoLoja = () => {
               <th style={celulaStyle}>📦 EAN</th>
               <th style={celulaStyle}>📝 Descrição</th>
               <th style={celulaStyle}>🏷️ Marca</th>
+              <th style={celulaStyle}>🔢 Quantidade Transferida</th>
               <th style={celulaStyle}>📅 Data da Movimentação</th>
             </tr>
           </thead>
@@ -116,6 +113,7 @@ const MovimentacoesGalpaoLoja = () => {
                 <td style={celulaStyle}>{item.ean}</td>
                 <td style={celulaStyle}>{item.descricao}</td>
                 <td style={celulaStyle}>{item.marca}</td>
+                <td style={{ ...celulaStyle, textAlign: "center" }}>{item.quantidade}</td>
                 <td style={{ ...celulaStyle, textAlign: "center" }}>
                   {new Date(item.data_saida).toLocaleString("pt-BR", {
                     day: "2-digit",
