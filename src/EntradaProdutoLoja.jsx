@@ -96,6 +96,7 @@ const EntradaProdutoLoja = () => {
         const novaEntrada = {
           id_produto: produtoInfo.id_produto,
           ean: produtoInfo.ean,
+          nome: produtoInfo.nome || produtoInfo.descricao || "Sem nome", // ✅ melhoria aplicada
           validade: validadeFormatada,
           quantidade: quantidadeNum,
           lote: lote || null,
