@@ -50,6 +50,7 @@ export default function PainelValidade() {
         descricao: produto?.descricao || "—",
         marca: produto?.marca || "—",
         quantidade: item.quantidade || 0,
+        saldoLoja: item.saldo_loja || 0,
         validade: validadeDate
           ? validadeDate.toLocaleDateString("pt-BR")
           : "—",
@@ -102,6 +103,7 @@ export default function PainelValidade() {
       Descrição: item.descricao,
       Marca: item.marca,
       Quantidade: item.quantidade,
+      SaldoLoja: item.saldoLoja,
       Validade: item.validade
     }));
 
@@ -137,7 +139,6 @@ export default function PainelValidade() {
         <span style={{ color: "#4caf50" }}>🟢 +180 dias</span>
       </p>
 
-      {/* 📦 Cartões de resumo (dinâmicos e mais compactos) */}
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         <div style={{
           backgroundColor: "#f0f4f8",
@@ -197,25 +198,13 @@ export default function PainelValidade() {
         <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
           <option value="">Ano</option>
           {anosDisponiveis.map(ano => (
-            <option key={ano} value={ano}>{ano}</option>
+            <option key={ano} value={ano}>
+              {ano}
+            </option>
           ))}
         </select>
-        <button
-          onClick={exportarParaExcel}
-          style={{
-            padding: "0.5rem 1rem",
-            backgroundColor: "#4caf50",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer"
-          }}
-        >
-          📥 Exportar para Excel
-        </button>
+        <button onClick={exportarParaExcel}>📥 Exportar</button>
       </div>
-
-      {erro && <p style={{ color: "red" }}>{erro}</p>}
 
       {dadosFiltrados.length === 0 ? (
         <p>Nenhum produto encontrado com os filtros aplicados.</p>
@@ -226,7 +215,8 @@ export default function PainelValidade() {
               <th>EAN</th>
               <th>Descrição</th>
               <th>Marca</th>
-              <th>Quantidade</th>
+              <th>Qtd Galpão</th>
+              <th>Qtd Loja</th>
               <th>Validade</th>
             </tr>
           </thead>
@@ -247,6 +237,7 @@ export default function PainelValidade() {
                 </td>
                 <td>{item.marca}</td>
                 <td>{item.quantidade}</td>
+                <td>{item.saldoLoja}</td>
                 <td>{item.validade}</td>
               </tr>
             ))}

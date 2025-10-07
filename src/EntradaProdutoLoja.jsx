@@ -107,7 +107,7 @@ const EntradaProdutoLoja = () => {
           .insert([novaEntrada]);
 
         if (erroInsert) {
-          console.error("Erro ao registrar nova entrada:", erroInsert);
+          console.error("Erro ao registrar nova entrada:", JSON.stringify(erroInsert, null, 2));
           alert("Erro ao registrar entrada no estoque da loja.");
           return;
         }

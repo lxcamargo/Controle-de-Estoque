@@ -18,10 +18,12 @@ const Dashboard = () => {
     border: "2px solid",
   };
 
-  const podeVerGalpao = ["administrador", "operador", "adm_galpao"].includes(tipoUsuario);
+  const podeVerGalpao = ["administrador", "operador", "adm_galpao", "operador_junior"].includes(tipoUsuario);
   const podeVerLoja = ["administrador", "operador_loja", "adm_loja"].includes(tipoUsuario);
-  const podeVerPainelGalpao = ["administrador", "operador", "adm_loja", "adm_galpao"].includes(tipoUsuario);
+  const podeVerPainelGalpao = ["administrador", "operador", "adm_loja", "adm_galpao", "operador_junior"].includes(tipoUsuario);
   const podeVerPainelLoja = ["administrador", "operador_loja", "adm_loja", "adm_galpao"].includes(tipoUsuario);
+
+  const bloquearEntradaSaidaGalpao = tipoUsuario === "operador_junior";
 
   return (
     <div className="overlay">
@@ -39,8 +41,12 @@ const Dashboard = () => {
               <section className="dashboard-section">
                 <h3>📦 Operações de Estoque</h3>
                 <div className="button-grid">
-                  <button onClick={() => abrirEmNovaAba("/entrada-produto")}>🆕 Registrar Entrada</button>
-                  <button onClick={() => abrirEmNovaAba("/saida-produto")}>📤 Registrar Saída</button>
+                  {!bloquearEntradaSaidaGalpao && (
+                    <>
+                      <button onClick={() => abrirEmNovaAba("/entrada-produto")}>🆕 Registrar Entrada</button>
+                      <button onClick={() => abrirEmNovaAba("/saida-produto")}>📤 Registrar Saída</button>
+                    </>
+                  )}
                   <button onClick={() => abrirEmNovaAba("/estoque")}>📦 Visualizar Estoque</button>
                   <button onClick={() => abrirEmNovaAba("/historico-entradas")}>📜 Histórico de Entradas</button>
                   <button onClick={() => abrirEmNovaAba("/historico-saidas")}>📤 Histórico de Saídas</button>
@@ -131,8 +137,6 @@ const Dashboard = () => {
                   >
                     📤 Histórico de Saídas - Loja
                   </button>
-
-                  {/* ✅ Novo botão para acessar a tela de movimentações */}
                   <button
                     onClick={() => abrirEmNovaAba("/movimentacoes-galpao-loja")}
                     style={{

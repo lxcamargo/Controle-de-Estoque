@@ -11,12 +11,13 @@ export default function PainelValidadeLoja() {
   const [filtroDescricao, setFiltroDescricao] = useState("");
   const [filtroMes, setFiltroMes] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("");
 
   useEffect(() => {
     const carregarDados = async () => {
       const { data, error } = await supabase
         .from("estoque_loja")
-        .select("*")
+        .select("ean, nome, marca, quantidade, validade, status_abastecimento")
         .gt("quantidade", 0);
 
       if (error) {
@@ -45,7 +46,8 @@ export default function PainelValidadeLoja() {
         validade: validadeDate
           ? validadeDate.toLocaleDateString("pt-BR")
           : "—",
-        validadeRaw: validadeDate
+        validadeRaw: validadeDate,
+        status: item.status_abastecimento || "—"
       };
     })
     .filter(item => item.validadeRaw)
@@ -61,7 +63,8 @@ export default function PainelValidadeLoja() {
       item.marca.toLowerCase().includes(filtroMarca.toLowerCase()) &&
       item.descricao.toLowerCase().includes(filtroDescricao.toLowerCase()) &&
       (filtroMes === "" || mes === parseInt(filtroMes)) &&
-      (filtroAno === "" || ano === parseInt(filtroAno))
+      (filtroAno === "" || ano === parseInt(filtroAno)) &&
+      (filtroStatus === "" || item.status === filtroStatus)
     );
   });
 
@@ -94,7 +97,8 @@ export default function PainelValidadeLoja() {
       Descrição: item.descricao,
       Marca: item.marca,
       Quantidade: item.quantidade,
-      Validade: item.validade
+      Validade: item.validade,
+      Status: item.status
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dadosParaExportar);
@@ -120,6 +124,8 @@ export default function PainelValidadeLoja() {
   const saldoTotal = dadosFiltrados.reduce((acc, item) => acc + item.quantidade, 0);
   const eansUnicos = new Set(dadosFiltrados.map(item => item.ean)).size;
 
+  const statusUnicos = Array.from(new Set(dadosOrdenados.map(item => item.status))).filter(Boolean);
+
   return (
     <div style={{ padding: "2rem" }}>
       <h2>🏬 Painel de Validade da Loja</h2>
@@ -132,7 +138,6 @@ export default function PainelValidadeLoja() {
         <span style={{ color: "#4caf50" }}>🟢 +180 dias</span>
       </p>
 
-      {/* 🧮 Cartões compactos com dados dinâmicos */}
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         <div style={{
           backgroundColor: "#f0f4f8",
@@ -163,24 +168,9 @@ export default function PainelValidadeLoja() {
       </div>
 
       <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-        <input
-          type="text"
-          placeholder="Filtrar por EAN"
-          value={filtroEAN}
-          onChange={e => setFiltroEAN(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Filtrar por Marca"
-          value={filtroMarca}
-          onChange={e => setFiltroMarca(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="Filtrar por Descrição"
-          value={filtroDescricao}
-          onChange={e => setFiltroDescricao(e.target.value)}
-        />
+        <input type="text" placeholder="Filtrar por EAN" value={filtroEAN} onChange={e => setFiltroEAN(e.target.value)} />
+        <input type="text" placeholder="Filtrar por Marca" value={filtroMarca} onChange={e => setFiltroMarca(e.target.value)} />
+        <input type="text" placeholder="Filtrar por Descrição" value={filtroDescricao} onChange={e => setFiltroDescricao(e.target.value)} />
         <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)}>
           <option value="">Mês</option>
           {[...Array(12)].map((_, i) => (
@@ -189,10 +179,16 @@ export default function PainelValidadeLoja() {
             </option>
           ))}
         </select>
-        <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
+                <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
           <option value="">Ano</option>
           {anosDisponiveis.map(ano => (
             <option key={ano} value={ano}>{ano}</option>
+          ))}
+        </select>
+        <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+          <option value="">Status</option>
+          {statusUnicos.map((status, index) => (
+            <option key={index} value={status}>{status}</option>
           ))}
         </select>
         <button
@@ -215,34 +211,46 @@ export default function PainelValidadeLoja() {
       {dadosFiltrados.length === 0 ? (
         <p>Nenhum produto encontrado com os filtros aplicados.</p>
       ) : (
-        <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table
+          border="1"
+          cellPadding="8"
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            tableLayout: "fixed"
+          }}
+        >
           <thead style={{ backgroundColor: "#f0f0f0" }}>
             <tr>
-              <th>EAN</th>
-              <th>Descrição</th>
-              <th>Marca</th>
-              <th>Quantidade</th>
-              <th>Validade</th>
+              <th style={{ width: "10%" }}>EAN</th>
+              <th style={{ width: "30%", textAlign: "left" }}>Descrição</th>
+              <th style={{ width: "15%" }}>Marca</th>
+              <th style={{ width: "10%" }}>Quantidade</th>
+              <th style={{ width: "15%" }}>Validade</th>
+              <th style={{ width: "20%" }}>Status de Abastecimento</th>
             </tr>
           </thead>
           <tbody>
             {dadosFiltrados.map((item, index) => (
               <tr key={index} style={estiloValidadeFaixa(item.validadeRaw)}>
                 <td>{item.ean}</td>
-                <td style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <div
-                    style={{
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      ...estiloBolinha(item.validadeRaw)
-                    }}
-                  ></div>
-                  {item.descricao}
+                <td style={{ textAlign: "left", wordBreak: "break-word" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <div
+                      style={{
+                        width: "12px",
+                        height: "12px",
+                        borderRadius: "50%",
+                        ...estiloBolinha(item.validadeRaw)
+                      }}
+                    ></div>
+                    {item.descricao}
+                  </div>
                 </td>
                 <td>{item.marca}</td>
-                <td>{item.quantidade}</td>
-                <td>{item.validade}</td>
+                <td style={{ textAlign: "center" }}>{item.quantidade}</td>
+                <td style={{ textAlign: "center" }}>{item.validade}</td>
+                <td>{item.status}</td>
               </tr>
             ))}
           </tbody>
