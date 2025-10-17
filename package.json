@@ -8,13 +8,19 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "importar-loja": "node src/importarEstoqueLojaServer.cjs"
+    "importar-loja": "node src/importarEstoqueLojaServer.cjs",
+    "api": "node src/api-saida-excel.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.54.0",
     "axios": "^1.11.0",
+    "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "googleapis": "^161.0.0",
     "html5-qrcode": "^2.3.8",
+    "pg": "^8.16.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",

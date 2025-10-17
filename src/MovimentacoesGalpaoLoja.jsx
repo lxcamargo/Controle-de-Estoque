@@ -24,7 +24,7 @@ const MovimentacoesGalpaoLoja = () => {
     try {
       let query = supabase
         .from("saida_historico")
-        .select("*")
+        .select("id, ean, quantidade, data_saida, validade, lote")
         .order("data_saida", { ascending: false });
 
       if (ean.trim() !== "") {
@@ -99,6 +99,8 @@ const MovimentacoesGalpaoLoja = () => {
               <th style={celulaStyle}>📝 Descrição</th>
               <th style={celulaStyle}>🏷️ Marca</th>
               <th style={celulaStyle}>🔢 Quantidade Transferida</th>
+              <th style={celulaStyle}>📄 Pedido</th>
+              <th style={celulaStyle}>📅 Validade</th>
               <th style={celulaStyle}>📅 Data da Movimentação</th>
             </tr>
           </thead>
@@ -114,6 +116,14 @@ const MovimentacoesGalpaoLoja = () => {
                 <td style={celulaStyle}>{item.descricao}</td>
                 <td style={celulaStyle}>{item.marca}</td>
                 <td style={{ ...celulaStyle, textAlign: "center" }}>{item.quantidade}</td>
+                <td style={celulaStyle}>
+                  {item.lote && item.lote.trim() !== "" ? item.lote : "—"}
+                </td>
+                <td style={{ ...celulaStyle, textAlign: "center" }}>
+                  {item.validade
+                    ? new Date(item.validade).toLocaleDateString("pt-BR")
+                    : "—"}
+                </td>
                 <td style={{ ...celulaStyle, textAlign: "center" }}>
                   {new Date(item.data_saida).toLocaleString("pt-BR", {
                     day: "2-digit",

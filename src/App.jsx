@@ -30,6 +30,10 @@ import HistoricoSaidaLoja from "./HistoricoSaidaLoja.jsx";
 // ✅ Novo componente para movimentações galpão → loja
 import MovimentacoesGalpaoLoja from "./MovimentacoesGalpaoLoja.jsx";
 
+// ✅ Novos componentes para ajuste de estoque via planilha
+import AjusteEstoqueLojaImportar from "./AjusteEstoqueLojaImportar.jsx";
+import AjusteEstoqueLojaBaixar from "./AjusteEstoqueLojaBaixar.jsx";
+
 function CadastroProduto() {
   const location = useLocation();
   const eanRecebido = location.state?.ean || "";
@@ -101,6 +105,10 @@ export default function App() {
 
         {/* ✅ Nova rota para movimentações entre setores */}
         <Route path="/movimentacoes-galpao-loja" element={<MovimentacoesGalpaoLoja />} />
+
+        {/* ✅ Novas rotas para ajuste de estoque via planilha */}
+        <Route path="/ajuste-estoque-loja-importar" element={<AjusteEstoqueLojaImportar />} />
+        <Route path="/ajuste-estoque-loja-baixar" element={<AjusteEstoqueLojaBaixar />} />
 
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>

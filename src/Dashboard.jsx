@@ -5,6 +5,7 @@ import "./dashboard.css";
 const Dashboard = () => {
   const navigate = useNavigate();
   const tipoUsuario = localStorage.getItem("tipoUsuario")?.toLowerCase();
+  const isADM = tipoUsuario === "administrador";
 
   const abrirEmNovaAba = (rota) => {
     window.open(`${window.location.origin}${rota}`, "_blank");
@@ -148,6 +149,18 @@ const Dashboard = () => {
                   >
                     🔄 Movimentações Galpão → Loja
                   </button>
+
+                  {/* ✅ Botões visíveis apenas para ADM */}
+                  {isADM && (
+                    <>
+                      <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-importar")}>
+                        📥 Importar Planilha de Ajuste
+                      </button>
+                      <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
+                        📉 Realizar Baixa de Estoque
+                      </button>
+                    </>
+                  )}
                 </div>
               </section>
             </>
