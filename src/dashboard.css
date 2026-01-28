@@ -39,13 +39,12 @@ body {
   padding: 40px 20px;
   max-width: 1280px;
   margin: 0 auto;
-  background-image: url("/images/jose-vs-bbb.png");
+  background-image: url("/jose-vs-bbb.png"); /* caminho corrigido */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   border-radius: 16px;
 }
-
 /* ✅ Seções e títulos */
 .dashboard-section {
   margin-bottom: 60px;
