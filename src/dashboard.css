@@ -39,7 +39,7 @@ body {
   padding: 40px 20px;
   max-width: 1280px;
   margin: 0 auto;
-  background-image: url("/C:/Users/alexc/vite-project/public/Jose vs BBB.png");
+  background-image: url("/Jose vs BBB.png"); /* caminho corrigido */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
