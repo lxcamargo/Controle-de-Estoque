@@ -3,6 +3,12 @@ import { supabase } from "./supabaseClient";
 import * as XLSX from "xlsx";
 
 export default function Estoque() {
+
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = "Estoque Atual";
+  }, []);
+
   const [estoque, setEstoque] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [erro, setErro] = useState(null);
@@ -20,7 +26,7 @@ export default function Estoque() {
       const { data: dadosEstoque, error: erroEstoque } = await supabase
         .from("estoque")
         .select("*")
-        .gt("quantidade", 0); // ✅ Filtra produtos com saldo positivo
+        .gt("quantidade", 0);
 
       const { data: dadosProdutos, error: erroProdutos } = await supabase
         .from("produto")
@@ -63,7 +69,8 @@ export default function Estoque() {
         validade: validadeDate
           ? validadeDate.toLocaleDateString("pt-BR")
           : "—",
-        validadeRaw: validadeDate
+        validadeRaw: validadeDate,
+        endereco: item.endereco || "VC-01-01-01" // ✅ novo campo (opcional)
       };
     })
     .filter(item => {
@@ -98,6 +105,9 @@ export default function Estoque() {
     })
     .sort((a, b) => b.quantidade - a.quantidade);
 
+  const totalSaldo = dadosCompletos.reduce((acc, item) => acc + item.quantidade, 0);
+  const eansUnicos = new Set(dadosCompletos.map(item => item.ean)).size;
+
   const validadeEstilo = data => {
     if (!data) return {};
     const hoje = new Date();
@@ -118,7 +128,8 @@ export default function Estoque() {
       Descrição: item.descricao,
       Marca: item.marca,
       Quantidade: item.quantidade,
-      Validade: item.validade
+      Validade: item.validade,
+      Endereço: item.endereco // ✅ incluído no Excel
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);
@@ -202,6 +213,11 @@ export default function Estoque() {
 
       <p>🔎 Exibindo <strong>{dadosCompletos.length}</strong> produtos</p>
 
+      <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
+        <p>📊 Saldo total: <strong>{totalSaldo}</strong></p>
+        <p>🔢 EANs únicos: <strong>{eansUnicos}</strong></p>
+      </div>
+
       {dadosCompletos.length > 0 ? (
         <table border="1" cellPadding="8" style={{ width: "100%" }}>
           <thead>
@@ -211,6 +227,7 @@ export default function Estoque() {
               <th>Marca</th>
               <th>Quantidade</th>
               <th>Validade</th>
+              <th>Endereço</th> {/* ✅ nova coluna */}
             </tr>
           </thead>
           <tbody>
@@ -221,6 +238,7 @@ export default function Estoque() {
                 <td>{item.marca}</td>
                 <td>{item.quantidade}</td>
                 <td style={validadeEstilo(item.validadeRaw)}>{item.validade}</td>
+                <td>{item.endereco}</td> {/* ✅ exibe o endereço (ou padrão) */}
               </tr>
             ))}
           </tbody>

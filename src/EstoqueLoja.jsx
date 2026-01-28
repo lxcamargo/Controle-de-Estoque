@@ -15,6 +15,11 @@ export default function EstoqueLoja() {
     anoValidade: ""
   });
 
+  // ✅ define o título da aba do navegador quando a tela abre
+  useEffect(() => {
+    document.title = "Estoque Loja";
+  }, []);
+
   useEffect(() => {
     const carregarDados = async () => {
       const { data: dadosEstoque, error: erroEstoque } = await supabase
@@ -83,12 +88,12 @@ export default function EstoqueLoja() {
               const data = item.validadeRaw;
               if (!data) return false;
               const mes = String(data.getMonth() + 1).padStart(2, "0");
-              const ano = String(data.getFullYear());
+              const ano = data.getFullYear(); // 👈 número
               const mesOk = filtroSanitizado.mesValidade
                 ? mes === filtroSanitizado.mesValidade
                 : true;
               const anoOk = filtroSanitizado.anoValidade
-                ? ano === filtroSanitizado.anoValidade
+                ? ano === Number(filtroSanitizado.anoValidade) // 👈 comparação numérica
                 : true;
               return mesOk && anoOk;
             })()
@@ -141,10 +146,44 @@ export default function EstoqueLoja() {
     )
   ).sort((a, b) => a - b);
 
+  // ✅ Novos cálculos
+  const saldoTotal = dadosCompletos.reduce((acc, item) => acc + item.quantidade, 0);
+  const eansUnicos = new Set(dadosCompletos.map(item => item.ean)).size;
+
   return (
     <div style={{ padding: "2rem" }}>
       <h1>🏬 Estoque Loja</h1>
       {erro && <p style={{ color: "red" }}>{erro}</p>}
+
+      {/* ✅ Cards de resumo */}
+      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+        <div style={{
+          backgroundColor: "#f0f4f8",
+          padding: "0.75rem 1.25rem",
+          borderRadius: "6px",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+          minWidth: "160px",
+          textAlign: "center"
+        }}>
+          <h4 style={{ margin: 0 }}>📦 Saldo Total</h4>
+          <p style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#2e7d32", margin: 0 }}>
+            {saldoTotal}
+          </p>
+        </div>
+        <div style={{
+          backgroundColor: "#f0f4f8",
+          padding: "0.75rem 1.25rem",
+          borderRadius: "6px",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+          minWidth: "160px",
+          textAlign: "center"
+        }}>
+          <h4 style={{ margin: 0 }}>🔢 EANs Únicos</h4>
+          <p style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#2e7d32", margin: 0 }}>
+            {eansUnicos}
+          </p>
+        </div>
+      </div>
 
       <div style={{ marginBottom: "1rem" }}>
         <input
@@ -183,13 +222,13 @@ export default function EstoqueLoja() {
           ))}
         </select>
 
-        <select
+                <select
           value={filtro.anoValidade}
           onChange={e => setFiltro({ ...filtro, anoValidade: e.target.value })}
         >
           <option value="">Filtrar por ano</option>
           {anosDisponiveis.map(ano => (
-            <option key={ano} value={String(ano)}>
+            <option key={ano} value={ano}>
               {ano}
             </option>
           ))}
@@ -200,7 +239,11 @@ export default function EstoqueLoja() {
         📤 Exportar para Excel
       </button>
 
-      <p>🔎 Exibindo <strong>{dadosCompletos.length}</strong> produtos</p>
+      <p>
+        🔎 Exibindo <strong>{dadosCompletos.length}</strong> produtos |
+        📦 Saldo Total: <strong>{saldoTotal}</strong> |
+        🔢 EANs Únicos: <strong>{eansUnicos}</strong>
+      </p>
 
       {dadosCompletos.length > 0 ? (
         <table border="1" cellPadding="8" style={{ width: "100%" }}>

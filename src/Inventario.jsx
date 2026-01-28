@@ -6,6 +6,11 @@ const Inventario = () => {
   const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [historico, setHistorico] = useState([]);
 
+  // ✅ Define o título da aba do navegador (NOVA LINHA PEDIDA)
+  useEffect(() => {
+    document.title = 'Inventário';
+  }, []);
+
   const carregarInventario = async () => {
     const { data: contagens, error: erroContagem } = await supabase
       .from('contagens')

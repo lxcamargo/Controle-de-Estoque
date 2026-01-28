@@ -8,6 +8,11 @@ export default function HistoricoContagens() {
   const [erro, setErro] = useState(null);
   const [eanFiltro, setEanFiltro] = useState("");
 
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = "Histórico de Contagem";
+  }, []);
+
   useEffect(() => {
     carregarDados();
   }, []);
@@ -24,10 +29,7 @@ export default function HistoricoContagens() {
     setLoading(true);
     try {
       // 🔥 Exclui contagens ajustadas do banco
-      await supabase
-        .from("contagens")
-        .delete()
-        .eq("ajustado", true);
+      await supabase.from("contagens").delete().eq("ajustado", true);
 
       let query = supabase
         .from("contagens")
@@ -79,7 +81,7 @@ export default function HistoricoContagens() {
         : "—",
       Quantidade: item.quantidade,
       Usuário: item.usuario_email || "—",
-      Ajustado: item.ajustado ? "Sim" : "Não"
+      Ajustado: item.ajustado ? "Sim" : "Não",
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);
@@ -98,7 +100,7 @@ export default function HistoricoContagens() {
           validade: item.validade,
           descricao: item.produto?.descricao || "—",
           marca: item.produto?.marca || "—",
-          quantidade: 0
+          quantidade: 0,
         };
       }
       acc[chave].quantidade += item.quantidade;
@@ -137,7 +139,7 @@ export default function HistoricoContagens() {
               backgroundColor: "#007BFF",
               color: "#fff",
               border: "none",
-              cursor: "pointer"
+              cursor: "pointer",
             }}
           >
             📤 Exportar Histórico para Excel
@@ -149,7 +151,7 @@ export default function HistoricoContagens() {
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              marginBottom: "2rem"
+              marginBottom: "2rem",
             }}
           >
             <thead style={{ backgroundColor: "#f0f0f0" }}>
@@ -172,7 +174,9 @@ export default function HistoricoContagens() {
                   <td>{item.produto?.marca || "—"}</td>
                   <td>
                     {item.validade
-                      ? new Date(item.validade + "T00:00:00").toLocaleDateString("pt-BR")
+                      ? new Date(
+                          item.validade + "T00:00:00"
+                        ).toLocaleDateString("pt-BR")
                       : "—"}
                   </td>
                   <td>

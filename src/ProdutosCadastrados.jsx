@@ -11,6 +11,11 @@ const ProdutosCadastrados = () => {
   const [pagina, setPagina] = useState(1);
   const itensPorPagina = 10;
 
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = "Produtos Cadastrados";
+  }, []);
+
   useEffect(() => {
     const buscarProdutos = async () => {
       setLoading(true);

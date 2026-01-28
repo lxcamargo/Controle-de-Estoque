@@ -6,6 +6,11 @@ const MovimentacoesGalpaoLoja = () => {
   const [usuarioEmail, setUsuarioEmail] = useState('');
   const [eanFiltro, setEanFiltro] = useState('');
 
+  // ✅ define o título da aba do navegador quando a tela abre
+  useEffect(() => {
+    document.title = "Movimentações Galpão → Loja";
+  }, []);
+
   useEffect(() => {
     const emailSalvo = localStorage.getItem("usuarioEmail");
     setUsuarioEmail(emailSalvo || "desconhecido@local");
@@ -24,7 +29,18 @@ const MovimentacoesGalpaoLoja = () => {
     try {
       let query = supabase
         .from("saida_historico")
-        .select("id, ean, quantidade, data_saida, validade, lote")
+        .select(`
+          id,
+          ean,
+          quantidade,
+          data_saida,
+          validade,
+          lote,
+          produto:produto (
+            descricao,
+            marca
+          )
+        `)
         .order("data_saida", { ascending: false });
 
       if (ean.trim() !== "") {
@@ -40,31 +56,11 @@ const MovimentacoesGalpaoLoja = () => {
 
       console.log("📦 Dados recebidos:", movimentacoesData);
 
-      const registrosComDescricao = await Promise.all(
-        movimentacoesData.map(async (item) => {
-          let descricao = "—";
-          let marca = "—";
-
-          if (item.ean) {
-            const { data: produtoData } = await supabase
-              .from("produto")
-              .select("descricao, marca")
-              .eq("ean", item.ean)
-              .single();
-
-            if (produtoData) {
-              descricao = produtoData.descricao || "—";
-              marca = produtoData.marca || "—";
-            }
-          }
-
-          return {
-            ...item,
-            descricao,
-            marca
-          };
-        })
-      );
+      const registrosComDescricao = movimentacoesData.map(item => ({
+        ...item,
+        descricao: item.produto?.descricao || "—",
+        marca: item.produto?.marca || "—"
+      }));
 
       setRegistros(registrosComDescricao);
     } catch (err) {

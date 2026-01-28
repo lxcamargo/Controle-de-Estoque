@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
@@ -10,6 +10,11 @@ const SaidaProdutoLoja = () => {
   const [produtoInfo, setProdutoInfo] = useState(null);
   const [mensagem, setMensagem] = useState("");
   const navigate = useNavigate();
+
+  // ✅ define o título da aba do navegador quando a tela abre
+  useEffect(() => {
+    document.title = "Saída de Produto da Loja";
+  }, []);
 
   const buscarProduto = async () => {
     setProdutoInfo(null);

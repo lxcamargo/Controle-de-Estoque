@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 
 export default function PainelValidadeLoja() {
   const [estoqueLoja, setEstoqueLoja] = useState([]);
+  const [estoqueGalpao, setEstoqueGalpao] = useState([]);
   const [erro, setErro] = useState(null);
 
   const [filtroEAN, setFiltroEAN] = useState("");
@@ -14,22 +15,49 @@ export default function PainelValidadeLoja() {
   const [filtroStatus, setFiltroStatus] = useState("");
 
   useEffect(() => {
-    const carregarDados = async () => {
-      const { data, error } = await supabase
-        .from("estoque_loja")
-        .select("ean, nome, marca, quantidade, validade, status_abastecimento")
-        .gt("quantidade", 0);
+    document.title = "Painel de Validade da Loja";
+  }, []);
 
-      if (error) {
-        setErro("Erro ao carregar dados.");
-        setEstoqueLoja([]);
-      } else {
-        setEstoqueLoja(data);
-        setErro(null);
-      }
-    };
+  const carregarDados = async () => {
+    const { data: dadosLoja, error: erroLoja } = await supabase
+      .from("estoque_loja")
+      .select("ean, nome, marca, quantidade, validade, status_abastecimento")
+      .gt("quantidade", 0);
 
+    const { data: dadosGalpao, error: erroGalpao } = await supabase
+      .from("estoque")
+      .select("ean, quantidade, validade")
+      .gt("quantidade", 0);
+
+    if (erroLoja || erroGalpao) {
+      setErro("Erro ao carregar dados.");
+      setEstoqueLoja([]);
+      setEstoqueGalpao([]);
+    } else {
+      setEstoqueLoja(dadosLoja || []);
+      setEstoqueGalpao(dadosGalpao || []);
+      setErro(null);
+    }
+  };
+
+  useEffect(() => {
     carregarDados();
+
+    // ✅ escuta mudanças na tabela estoque (Realtime)
+    const channel = supabase
+      .channel("estoque-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "estoque" },
+        () => {
+          carregarDados();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const dadosOrdenados = estoqueLoja
@@ -37,6 +65,11 @@ export default function PainelValidadeLoja() {
       const validadeDate = item.validade
         ? new Date(item.validade + "T00:00:00")
         : null;
+
+      // 👇 procura saldo no galpão com mesmo EAN e validade
+      const saldoGalpao = estoqueGalpao.find(
+        g => g.ean === item.ean && g.validade === item.validade
+      )?.quantidade || 0;
 
       return {
         ean: item.ean || "—",
@@ -47,7 +80,8 @@ export default function PainelValidadeLoja() {
           ? validadeDate.toLocaleDateString("pt-BR")
           : "—",
         validadeRaw: validadeDate,
-        status: item.status_abastecimento || "—"
+        status: item.status_abastecimento || "—",
+        saldoGalpao // 👈 nova coluna
       };
     })
     .filter(item => item.validadeRaw)
@@ -96,7 +130,8 @@ export default function PainelValidadeLoja() {
       EAN: item.ean,
       Descrição: item.descricao,
       Marca: item.marca,
-      Quantidade: item.quantidade,
+      Quantidade_Loja: item.quantidade,
+      Saldo_Galpao: item.saldoGalpao,
       Validade: item.validade,
       Status: item.status
     }));
@@ -123,7 +158,6 @@ export default function PainelValidadeLoja() {
 
   const saldoTotal = dadosFiltrados.reduce((acc, item) => acc + item.quantidade, 0);
   const eansUnicos = new Set(dadosFiltrados.map(item => item.ean)).size;
-
   const statusUnicos = Array.from(new Set(dadosOrdenados.map(item => item.status))).filter(Boolean);
 
   return (
@@ -159,11 +193,11 @@ export default function PainelValidadeLoja() {
           boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
           minWidth: "160px",
           textAlign: "center"
-        }}>
+}}>
           <h4 style={{ margin: 0, fontSize: "1rem" }}>🔢 EANs Únicos</h4>
           <p style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#2e7d32", margin: 0 }}>
             {eansUnicos}
-          </p>
+                      </p>
         </div>
       </div>
 
@@ -179,7 +213,7 @@ export default function PainelValidadeLoja() {
             </option>
           ))}
         </select>
-                <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
+        <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)}>
           <option value="">Ano</option>
           {anosDisponiveis.map(ano => (
             <option key={ano} value={ano}>{ano}</option>
@@ -223,11 +257,12 @@ export default function PainelValidadeLoja() {
           <thead style={{ backgroundColor: "#f0f0f0" }}>
             <tr>
               <th style={{ width: "10%" }}>EAN</th>
-              <th style={{ width: "30%", textAlign: "left" }}>Descrição</th>
+              <th style={{ width: "25%", textAlign: "left" }}>Descrição</th>
               <th style={{ width: "15%" }}>Marca</th>
-              <th style={{ width: "10%" }}>Quantidade</th>
+              <th style={{ width: "10%" }}>Qtd Loja</th>
+              <th style={{ width: "10%" }}>Saldo Galpão</th> {/* 👈 nova coluna */}
               <th style={{ width: "15%" }}>Validade</th>
-              <th style={{ width: "20%" }}>Status de Abastecimento</th>
+              <th style={{ width: "15%" }}>Status de Abastecimento</th>
             </tr>
           </thead>
           <tbody>
@@ -249,6 +284,7 @@ export default function PainelValidadeLoja() {
                 </td>
                 <td>{item.marca}</td>
                 <td style={{ textAlign: "center" }}>{item.quantidade}</td>
+                <td style={{ textAlign: "center" }}>{item.saldoGalpao}</td> {/* 👈 nova célula */}
                 <td style={{ textAlign: "center" }}>{item.validade}</td>
                 <td>{item.status}</td>
               </tr>

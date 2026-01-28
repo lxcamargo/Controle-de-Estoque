@@ -13,6 +13,11 @@ const EntradaProdutoLoja = () => {
   const [usuarioEmail, setUsuarioEmail] = useState('');
   const navigate = useNavigate();
 
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = 'Entrada de Produto - Loja';
+  }, []);
+
   useEffect(() => {
     const emailSalvo = localStorage.getItem("usuarioEmail");
     setUsuarioEmail(emailSalvo || "desconhecido@local");
@@ -96,8 +101,8 @@ const EntradaProdutoLoja = () => {
         const novaEntrada = {
           id_produto: produtoInfo.id_produto,
           ean: produtoInfo.ean,
-          nome: produtoInfo.descricao, // ✅ nome vem de descricao
-          marca: produtoInfo.marca,    // ✅ marca incluída
+          nome: produtoInfo.descricao,
+          marca: produtoInfo.marca,
           validade: validadeFormatada,
           quantidade: quantidadeNum,
           lote: lote || null,

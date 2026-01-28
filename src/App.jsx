@@ -34,6 +34,15 @@ import MovimentacoesGalpaoLoja from "./MovimentacoesGalpaoLoja.jsx";
 import AjusteEstoqueLojaImportar from "./AjusteEstoqueLojaImportar.jsx";
 import AjusteEstoqueLojaBaixar from "./AjusteEstoqueLojaBaixar.jsx";
 
+// ✅ Novo componente de indicadores de movimentação
+import IndicadoresMovimentacao from "./IndicadoresMovimentacao.jsx";
+
+// ✅ Novo componente de saldo consolidado
+import SaldoConsolidado from "./SaldoConsolidado.jsx";
+
+// ✅ Novo componente de transferência de endereço
+import TransferenciaEndereco from "./TransferenciaEndereco.jsx";
+
 function CadastroProduto() {
   const location = useLocation();
   const eanRecebido = location.state?.ean || "";
@@ -109,6 +118,15 @@ export default function App() {
         {/* ✅ Novas rotas para ajuste de estoque via planilha */}
         <Route path="/ajuste-estoque-loja-importar" element={<AjusteEstoqueLojaImportar />} />
         <Route path="/ajuste-estoque-loja-baixar" element={<AjusteEstoqueLojaBaixar />} />
+
+        {/* ✅ Nova rota para indicadores de movimentação */}
+        <Route path="/indicadores-movimentacao" element={<IndicadoresMovimentacao />} />
+
+        {/* ✅ Nova rota para saldo consolidado */}
+        <Route path="/saldo-consolidado" element={<SaldoConsolidado />} />
+
+        {/* ✅ Nova rota para transferência de endereço */}
+        <Route path="/transferencia-endereco" element={<TransferenciaEndereco />} />
 
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>

@@ -7,6 +7,11 @@ const HistoricoSaidaLoja = () => {
   const [usuarioEmail, setUsuarioEmail] = useState('');
   const [eanFiltro, setEanFiltro] = useState('');
 
+  // ✅ define o título da aba do navegador quando a tela abre
+  useEffect(() => {
+    document.title = "Histórico de Saída - Loja";
+  }, []);
+
   useEffect(() => {
     const emailSalvo = localStorage.getItem("usuarioEmail");
     setUsuarioEmail(emailSalvo || "desconhecido@local");

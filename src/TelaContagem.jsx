@@ -13,6 +13,11 @@ const TelaContagem = () => {
   const [produtoId, setProdutoId] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
 
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = 'Tela de Contagem';
+  }, []);
+
   useEffect(() => {
     const emailLocal = localStorage.getItem("usuarioEmail");
     if (emailLocal) {
@@ -85,7 +90,7 @@ const TelaContagem = () => {
       !usuarioEmail?.trim() ||
       !produtoIdValido ||
       isNaN(quantidadeNum) ||
-      quantidadeNum < 0 // ✅ agora aceita 0 como válido
+      quantidadeNum < 0
     ) {
       alert("Preencha todos os campos corretamente antes de registrar.");
       return;

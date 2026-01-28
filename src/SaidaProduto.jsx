@@ -1,8 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
 const SaidaProduto = () => {
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = "Saida de Produto";
+  }, []);
+
   const [ean, setEan] = useState("");
   const [quantidade, setQuantidade] = useState("");
   const [lote, setLote] = useState("");
@@ -10,6 +15,7 @@ const SaidaProduto = () => {
   const [produtoInfo, setProdutoInfo] = useState(null);
   const [mensagem, setMensagem] = useState("");
   const navigate = useNavigate();
+  
 
   const buscarProduto = async () => {
     setProdutoInfo(null);

@@ -19,6 +19,11 @@ const EntradaProduto = () => {
     console.log("📧 Usuário logado:", emailSalvo);
   }, []);
 
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = 'Registrar Entrada';
+  }, []);
+
   const buscarProduto = async () => {
     setProdutoEncontrado(false);
     setProdutoInfo(null);

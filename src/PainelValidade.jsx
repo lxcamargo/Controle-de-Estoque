@@ -12,6 +12,12 @@ export default function PainelValidade() {
   const [filtroDescricao, setFiltroDescricao] = useState("");
   const [filtroMes, setFiltroMes] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
+  const [filtroQtdLojaOperador, setFiltroQtdLojaOperador] = useState(""); // operador
+  const [filtroQtdLojaValor, setFiltroQtdLojaValor] = useState("");       // valor
+
+  useEffect(() => {
+    document.title = "Painel de Validade - Galpão";
+  }, []);
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -38,39 +44,63 @@ export default function PainelValidade() {
     carregarDados();
   }, []);
 
-  const dadosOrdenados = estoque
-    .map(item => {
-      const produto = produtos.find(p => p.id_produto === item.id_produto);
-      const validadeDate = item.validade
-        ? new Date(item.validade + "T00:00:00")
-        : null;
+  // Consolida os saldos por EAN + validade
+  const dadosConsolidados = {};
+  estoque.forEach(item => {
+    const produto = produtos.find(p => p.id_produto === item.id_produto);
+    const validadeDate = item.validade ? new Date(item.validade + "T00:00:00") : null;
+    if (!validadeDate) return;
 
-      return {
+    const chave = `${produto?.ean || "—"}-${validadeDate.toISOString().split("T")[0]}`;
+
+    if (!dadosConsolidados[chave]) {
+      dadosConsolidados[chave] = {
         ean: produto?.ean || "—",
         descricao: produto?.descricao || "—",
         marca: produto?.marca || "—",
         quantidade: item.quantidade || 0,
         saldoLoja: item.saldo_loja || 0,
-        validade: validadeDate
-          ? validadeDate.toLocaleDateString("pt-BR")
-          : "—",
+        validade: validadeDate.toLocaleDateString("pt-BR"),
         validadeRaw: validadeDate
       };
-    })
-    .filter(item => item.validadeRaw)
-    .sort((a, b) => a.validadeRaw - b.validadeRaw);
+    } else {
+      dadosConsolidados[chave].quantidade += item.quantidade || 0;
+      dadosConsolidados[chave].saldoLoja += item.saldo_loja || 0;
+    }
+  });
+
+  const dadosOrdenados = Object.values(dadosConsolidados).sort(
+    (a, b) => a.validadeRaw - b.validadeRaw
+  );
 
   const dadosFiltrados = dadosOrdenados.filter(item => {
     const validade = item.validadeRaw;
     const mes = validade?.getMonth() + 1;
     const ano = validade?.getFullYear();
 
+    const saldo = Number(item.saldoLoja);
+    const valor = Number(filtroQtdLojaValor);
+
+    let condicaoQtdLoja = true;
+    if (filtroQtdLojaOperador && filtroQtdLojaValor !== "") {
+      switch (filtroQtdLojaOperador) {
+        case "=":  condicaoQtdLoja = saldo === valor; break;
+        case "<>": condicaoQtdLoja = saldo !== valor; break;
+        case "<":  condicaoQtdLoja = saldo < valor; break;
+        case "<=": condicaoQtdLoja = saldo <= valor; break;
+        case ">":  condicaoQtdLoja = saldo > valor; break;
+        case ">=": condicaoQtdLoja = saldo >= valor; break;
+        default:   condicaoQtdLoja = true;
+      }
+    }
+
     return (
       item.ean.toLowerCase().includes(filtroEAN.toLowerCase()) &&
       item.marca.toLowerCase().includes(filtroMarca.toLowerCase()) &&
       item.descricao.toLowerCase().includes(filtroDescricao.toLowerCase()) &&
       (filtroMes === "" || mes === parseInt(filtroMes)) &&
-      (filtroAno === "" || ano === parseInt(filtroAno))
+      (filtroAno === "" || ano === parseInt(filtroAno)) &&
+      condicaoQtdLoja
     );
   });
 
@@ -161,7 +191,7 @@ export default function PainelValidade() {
           minWidth: "160px",
           textAlign: "center"
         }}>
-          <h4 style={{ margin: 0, fontSize: "1rem" }}>🔢 EANs Únicos</h4>
+                    <h4 style={{ margin: 0, fontSize: "1rem" }}>🔢 EANs Únicos</h4>
           <p style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#2e7d32", margin: 0 }}>
             {new Set(dadosFiltrados.map(item => item.ean)).size}
           </p>
@@ -203,8 +233,25 @@ export default function PainelValidade() {
             </option>
           ))}
         </select>
+        <select value={filtroQtdLojaOperador} onChange={e => setFiltroQtdLojaOperador(e.target.value)}>
+          <option value="">Operador</option>
+          <option value="=">=</option>
+          <option value="<>">{"<>"}</option>
+          <option value="<">{"<"}</option>
+          <option value="<=">{"<="}</option>
+          <option value=">">{">"}</option>
+          <option value=">=">{">="}</option>
+        </select>
+        <input
+          type="number"
+          placeholder="Qtd Loja valor"
+          value={filtroQtdLojaValor}
+          onChange={e => setFiltroQtdLojaValor(e.target.value)}
+        />
         <button onClick={exportarParaExcel}>📥 Exportar</button>
       </div>
+
+      {erro && <p style={{ color: "red" }}>{erro}</p>}
 
       {dadosFiltrados.length === 0 ? (
         <p>Nenhum produto encontrado com os filtros aplicados.</p>

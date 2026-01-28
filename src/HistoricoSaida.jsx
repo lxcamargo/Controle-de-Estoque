@@ -7,6 +7,11 @@ const HistoricoSaida = () => {
   const [usuarioEmail, setUsuarioEmail] = useState('');
   const [eanFiltro, setEanFiltro] = useState('');
 
+  // ✅ Define o título da aba
+  useEffect(() => {
+    document.title = "Historico de Saida";
+  }, []);
+
   useEffect(() => {
     const emailSalvo = localStorage.getItem("usuarioEmail");
     setUsuarioEmail(emailSalvo || "desconhecido@local");
@@ -55,7 +60,7 @@ const HistoricoSaida = () => {
           let marca = "—";
 
           if (item.ean) {
-            const { data: produtoData, error: produtoError } = await supabase
+            const { data: produtoData } = await supabase
               .from("produto")
               .select("descricao, marca")
               .eq("ean", item.ean)

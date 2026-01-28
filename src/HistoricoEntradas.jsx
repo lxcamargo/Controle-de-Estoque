@@ -8,6 +8,11 @@ export default function HistoricoEntradas() {
   const [erro, setErro] = useState(null);
   const [eanFiltro, setEanFiltro] = useState("");
 
+  // ✅ Define o título da aba do navegador
+  useEffect(() => {
+    document.title = "Historico de Entrada";
+  }, []);
+
   useEffect(() => {
     carregarDados();
   }, []);
@@ -105,7 +110,11 @@ export default function HistoricoEntradas() {
             📤 Exportar Histórico para Excel
           </button>
 
-          <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table
+            border="1"
+            cellPadding="8"
+            style={{ width: "100%", borderCollapse: "collapse" }}
+          >
             <thead style={{ backgroundColor: "#f0f0f0" }}>
               <tr>
                 <th>EAN</th>
