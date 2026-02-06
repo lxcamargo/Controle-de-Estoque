@@ -103,6 +103,7 @@ const EntradaProduto = () => {
         const dadosEntrada = {
           id_produto: produtoInfo.id_produto,
           ean: produtoInfo.ean,
+          nome: produtoInfo.descricao,   // 👈 usa descricao da tabela produto e grava em estoque.nome
           validade: validadeFormatada,
           quantidade: quantidadeNum,
           lote: lote || null,
