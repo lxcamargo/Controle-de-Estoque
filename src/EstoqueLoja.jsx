@@ -61,9 +61,10 @@ export default function EstoqueLoja() {
         : null;
 
       return {
-        ean: produto?.ean || `EAN não cadastrado`,
-        descricao: produto?.descricao || "Produto não cadastrado",
-        marca: produto?.marca || "—",
+        // 👇 Usa os dados da tabela estoque_loja como principal
+        ean: item.ean || produto?.ean || "EAN não cadastrado",
+        descricao: item.descricao || item.nome || produto?.descricao || produto?.nome || "Produto não cadastrado",
+        marca: item.marca || produto?.marca || "—",
         quantidade: Number(item.quantidade) || 0,
         validade: validadeDate
           ? validadeDate.toLocaleDateString("pt-BR")
@@ -220,19 +221,7 @@ export default function EstoqueLoja() {
               {new Date(0, i).toLocaleString("pt-BR", { month: "long" })}
             </option>
           ))}
-        </select>
-
-                <select
-          value={filtro.anoValidade}
-          onChange={e => setFiltro({ ...filtro, anoValidade: e.target.value })}
-        >
-          <option value="">Filtrar por ano</option>
-          {anosDisponiveis.map(ano => (
-            <option key={ano} value={ano}>
-              {ano}
-            </option>
-          ))}
-        </select>
+                </select>
       </div>
 
       <button onClick={exportarParaExcel} style={{ marginBottom: "1rem" }}>
