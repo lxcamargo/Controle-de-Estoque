@@ -20,10 +20,14 @@ const ProdutosCadastrados = () => {
     const buscarProdutos = async () => {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from("produto")
-        .select("*")
-        .order("descricao", { ascending: true });
+      let query = supabase.from("produto").select("*").order("descricao", { ascending: true });
+
+      // ✅ Se houver busca, aplica filtro direto no banco
+      if (busca && busca.trim() !== "") {
+        query = query.ilike("ean", `%${busca}%`);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Erro ao buscar produtos:", error);
@@ -52,14 +56,10 @@ const ProdutosCadastrados = () => {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [location.state]);
+  }, [location.state, busca]);
 
-  const produtosFiltrados = produtos.filter((produto) =>
-    produto.ean?.toString().includes(busca)
-  );
-
-  const totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina);
-  const produtosPaginados = produtosFiltrados.slice(
+  const totalPaginas = Math.ceil(produtos.length / itensPorPagina);
+  const produtosPaginados = produtos.slice(
     (pagina - 1) * itensPorPagina,
     pagina * itensPorPagina
   );
@@ -74,7 +74,7 @@ const ProdutosCadastrados = () => {
   };
 
   const exportarParaExcel = () => {
-    const dadosExportacao = produtosFiltrados.map((produto) => ({
+    const dadosExportacao = produtos.map((produto) => ({
       EAN: produto.ean,
       Descrição: produto.descricao,
       Marca: produto.marca,
@@ -121,7 +121,7 @@ const ProdutosCadastrados = () => {
 
       {loading ? (
         <p>Carregando produtos...</p>
-      ) : produtosFiltrados.length === 0 ? (
+      ) : produtos.length === 0 ? (
         <p>Nenhum produto encontrado.</p>
       ) : (
         <>
@@ -136,7 +136,7 @@ const ProdutosCadastrados = () => {
             </thead>
             <tbody>
               {produtosPaginados.map((produto) => (
-                <tr key={produto.ean}>
+                <tr key={produto.id_produto}>
                   <td style={celulaStyle}>{produto.ean}</td>
                   <td style={celulaStyle}>{produto.descricao}</td>
                   <td style={celulaStyle}>{produto.marca}</td>

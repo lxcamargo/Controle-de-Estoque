@@ -30,31 +30,46 @@ export default function IndicadoresMovimentacao() {
 
     const carregarKpis = async () => {
       try {
-        // 📥 Entradas
-        const { data: entradas, error: erroEntrada } = await supabase
-          .from("entrada_historico")
-          .select("quantidade, data_entrada");
+        // monta intervalo de datas conforme filtro
+        let inicio = null;
+        let fim = null;
+        if (filtroAno) {
+          if (filtroMes) {
+            inicio = `${filtroAno}-${String(filtroMes).padStart(2,"0")}-01`;
+            const ultimoDia = new Date(filtroAno, filtroMes, 0).getDate();
+            fim = `${filtroAno}-${String(filtroMes).padStart(2,"0")}-${ultimoDia}`;
+          } else {
+            inicio = `${filtroAno}-01-01`;
+            fim = `${filtroAno}-12-31`;
+          }
+        }
 
+        // 📥 Entradas
+        let queryEntradas = supabase.from("entrada_historico").select("quantidade, data_entrada");
+        if (inicio && fim) {
+          queryEntradas = queryEntradas.gte("data_entrada", inicio).lte("data_entrada", fim);
+        }
+        const { data: entradas, error: erroEntrada } = await queryEntradas;
         if (erroEntrada) throw erroEntrada;
 
         const somaEntrada = entradas?.reduce((acc, item) => acc + item.quantidade, 0) || 0;
         setTotalEntrada(somaEntrada);
 
         // 📤 Saídas
-        const { data: saidas, error: erroSaida } = await supabase
-          .from("saida_historico")
-          .select("quantidade, data_saida");
-
+        let querySaidas = supabase.from("saida_historico").select("quantidade, data_saida");
+        if (inicio && fim) {
+          querySaidas = querySaidas.gte("data_saida", inicio).lte("data_saida", fim);
+        }
+        const { data: saidas, error: erroSaida } = await querySaidas;
         if (erroSaida) throw erroSaida;
 
         const somaSaida = saidas?.reduce((acc, item) => acc + item.quantidade, 0) || 0;
         setTotalSaida(somaSaida);
 
-        // 📋 Inventário
+        // 📋 Inventário (não depende de data)
         const { count: inventariados, error: erroInventario } = await supabase
           .from("inventario")
           .select("*", { count: "exact", head: true });
-
         if (erroInventario) throw erroInventario;
         setTotalInventario(inventariados || 0);
 
@@ -63,13 +78,7 @@ export default function IndicadoresMovimentacao() {
         entradas?.forEach(e => {
           const data = new Date(e.data_entrada);
           const dia = data.toLocaleDateString("pt-BR");
-          const ano = data.getFullYear();
-          const mes = data.getMonth() + 1;
-
-          if ((filtroAno === "" || ano === Number(filtroAno)) &&
-              (filtroMes === "" || mes === Number(filtroMes))) {
-            entradasAgrupadas[dia] = (entradasAgrupadas[dia] || 0) + e.quantidade;
-          }
+          entradasAgrupadas[dia] = (entradasAgrupadas[dia] || 0) + e.quantidade;
         });
 
         // 🔄 Agrupamento diário de saídas
@@ -77,13 +86,7 @@ export default function IndicadoresMovimentacao() {
         saidas?.forEach(s => {
           const data = new Date(s.data_saida);
           const dia = data.toLocaleDateString("pt-BR");
-          const ano = data.getFullYear();
-          const mes = data.getMonth() + 1;
-
-          if ((filtroAno === "" || ano === Number(filtroAno)) &&
-              (filtroMes === "" || mes === Number(filtroMes))) {
-            saidasAgrupadas[dia] = (saidasAgrupadas[dia] || 0) + s.quantidade;
-          }
+          saidasAgrupadas[dia] = (saidasAgrupadas[dia] || 0) + s.quantidade;
         });
 
         setEntradasDiarias(

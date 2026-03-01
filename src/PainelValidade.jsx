@@ -4,7 +4,6 @@ import * as XLSX from "xlsx";
 
 export default function PainelValidade() {
   const [estoque, setEstoque] = useState([]);
-  const [produtos, setProdutos] = useState([]);
   const [erro, setErro] = useState(null);
 
   const [filtroEAN, setFiltroEAN] = useState("");
@@ -12,8 +11,8 @@ export default function PainelValidade() {
   const [filtroDescricao, setFiltroDescricao] = useState("");
   const [filtroMes, setFiltroMes] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
-  const [filtroQtdLojaOperador, setFiltroQtdLojaOperador] = useState(""); // operador
-  const [filtroQtdLojaValor, setFiltroQtdLojaValor] = useState("");       // valor
+  const [filtroQtdLojaOperador, setFiltroQtdLojaOperador] = useState("");
+  const [filtroQtdLojaValor, setFiltroQtdLojaValor] = useState("");
 
   useEffect(() => {
     document.title = "Painel de Validade - Galpão";
@@ -21,22 +20,22 @@ export default function PainelValidade() {
 
   useEffect(() => {
     const carregarDados = async () => {
-      const { data: dadosEstoque, error: erroEstoque } = await supabase
+      const { data, error } = await supabase
         .from("estoque")
-        .select("*")
+        .select(`
+          id_produto,
+          quantidade,
+          saldo_loja,
+          validade,
+          produto:produto (ean, descricao, marca)
+        `)
         .gt("quantidade", 0);
 
-      const { data: dadosProdutos, error: erroProdutos } = await supabase
-        .from("produto")
-        .select("*");
-
-      if (erroEstoque || erroProdutos) {
+      if (error) {
         setErro("Erro ao carregar dados.");
         setEstoque([]);
-        setProdutos([]);
       } else {
-        setEstoque(dadosEstoque);
-        setProdutos(dadosProdutos);
+        setEstoque(data);
         setErro(null);
       }
     };
@@ -44,20 +43,19 @@ export default function PainelValidade() {
     carregarDados();
   }, []);
 
-  // Consolida os saldos por EAN + validade
+  // Consolida os saldos por produto + validade
   const dadosConsolidados = {};
   estoque.forEach(item => {
-    const produto = produtos.find(p => p.id_produto === item.id_produto);
     const validadeDate = item.validade ? new Date(item.validade + "T00:00:00") : null;
     if (!validadeDate) return;
 
-    const chave = `${produto?.ean || "—"}-${validadeDate.toISOString().split("T")[0]}`;
+    const chave = `${item.produto?.ean || "—"}-${validadeDate.toISOString().split("T")[0]}`;
 
     if (!dadosConsolidados[chave]) {
       dadosConsolidados[chave] = {
-        ean: produto?.ean || "—",
-        descricao: produto?.descricao || "—",
-        marca: produto?.marca || "—",
+        ean: item.produto?.ean || "—",
+        descricao: item.produto?.descricao || "—",
+        marca: item.produto?.marca || "—",
         quantidade: item.quantidade || 0,
         saldoLoja: item.saldo_loja || 0,
         validade: validadeDate.toLocaleDateString("pt-BR"),
@@ -187,11 +185,11 @@ export default function PainelValidade() {
           backgroundColor: "#f0f4f8",
           padding: "0.75rem 1.25rem",
           borderRadius: "6px",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
           minWidth: "160px",
           textAlign: "center"
         }}>
-                    <h4 style={{ margin: 0, fontSize: "1rem" }}>🔢 EANs Únicos</h4>
+          <h4 style={{ margin: 0, fontSize: "1rem" }}>🔢 EANs Únicos</h4>
           <p style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#2e7d32", margin: 0 }}>
             {new Set(dadosFiltrados.map(item => item.ean)).size}
           </p>

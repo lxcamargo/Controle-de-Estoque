@@ -4,13 +4,11 @@ import * as XLSX from "xlsx";
 
 export default function Estoque() {
 
-  // ✅ Define o título da aba do navegador
   useEffect(() => {
     document.title = "Estoque Atual";
   }, []);
 
   const [estoque, setEstoque] = useState([]);
-  const [produtos, setProdutos] = useState([]);
   const [erro, setErro] = useState(null);
 
   const [filtro, setFiltro] = useState({
@@ -23,22 +21,26 @@ export default function Estoque() {
 
   useEffect(() => {
     const carregarDados = async () => {
-      const { data: dadosEstoque, error: erroEstoque } = await supabase
+
+      const { data, error } = await supabase
         .from("estoque")
-        .select("*")
+        .select(`
+          quantidade,
+          validade,
+          endereco,
+          produto (
+            ean,
+            descricao,
+            marca
+          )
+        `)
         .gt("quantidade", 0);
 
-      const { data: dadosProdutos, error: erroProdutos } = await supabase
-        .from("produto")
-        .select("*");
-
-      if (erroEstoque || erroProdutos) {
+      if (error) {
         setErro("Erro ao carregar dados do Supabase.");
         setEstoque([]);
-        setProdutos([]);
       } else {
-        setEstoque(dadosEstoque);
-        setProdutos(dadosProdutos);
+        setEstoque(data);
         setErro(null);
       }
     };
@@ -56,13 +58,14 @@ export default function Estoque() {
 
   const dadosCompletos = estoque
     .map(item => {
-      const produto = produtos.find(p => p.id_produto === item.id_produto);
+      const produto = item.produto;
+
       const validadeDate = item.validade
         ? new Date(item.validade + "T00:00:00")
         : null;
 
       return {
-        ean: produto?.ean || `EAN não cadastrado`,
+        ean: produto?.ean || "EAN não cadastrado",
         descricao: produto?.descricao || "Produto não cadastrado",
         marca: produto?.marca || "—",
         quantidade: Number(item.quantidade) || 0,
@@ -70,16 +73,18 @@ export default function Estoque() {
           ? validadeDate.toLocaleDateString("pt-BR")
           : "—",
         validadeRaw: validadeDate,
-        endereco: item.endereco || "VC-01-01-01" // ✅ novo campo (opcional)
+        endereco: item.endereco || "VC-01-01-01"
       };
     })
     .filter(item => {
       const eanMatch = filtroSanitizado.ean
         ? item.ean.toLowerCase().includes(filtroSanitizado.ean)
         : true;
+
       const descricaoMatch = filtroSanitizado.descricao
         ? item.descricao.toLowerCase().includes(filtroSanitizado.descricao)
         : true;
+
       const marcaMatch = filtroSanitizado.marca
         ? item.marca.toLowerCase().includes(filtroSanitizado.marca)
         : true;
@@ -89,14 +94,18 @@ export default function Estoque() {
           ? (() => {
               const data = item.validadeRaw;
               if (!data) return false;
+
               const mes = String(data.getMonth() + 1).padStart(2, "0");
               const ano = String(data.getFullYear());
+
               const mesOk = filtroSanitizado.mesValidade
                 ? mes === filtroSanitizado.mesValidade
                 : true;
+
               const anoOk = filtroSanitizado.anoValidade
                 ? ano === filtroSanitizado.anoValidade
                 : true;
+
               return mesOk && anoOk;
             })()
           : true;
@@ -112,6 +121,7 @@ export default function Estoque() {
     if (!data) return {};
     const hoje = new Date();
     const diasRestantes = (data - hoje) / (1000 * 60 * 60 * 24);
+
     if (diasRestantes < 7) return { backgroundColor: "#ffe0e0" };
     if (diasRestantes < 30) return { backgroundColor: "#fff5cc" };
     return {};
@@ -129,7 +139,7 @@ export default function Estoque() {
       Marca: item.marca,
       Quantidade: item.quantidade,
       Validade: item.validade,
-      Endereço: item.endereco // ✅ incluído no Excel
+      Endereço: item.endereco
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);
@@ -227,7 +237,7 @@ export default function Estoque() {
               <th>Marca</th>
               <th>Quantidade</th>
               <th>Validade</th>
-              <th>Endereço</th> {/* ✅ nova coluna */}
+              <th>Endereço</th>
             </tr>
           </thead>
           <tbody>
@@ -237,8 +247,10 @@ export default function Estoque() {
                 <td>{item.descricao}</td>
                 <td>{item.marca}</td>
                 <td>{item.quantidade}</td>
-                <td style={validadeEstilo(item.validadeRaw)}>{item.validade}</td>
-                <td>{item.endereco}</td> {/* ✅ exibe o endereço (ou padrão) */}
+                <td style={validadeEstilo(item.validadeRaw)}>
+                  {item.validade}
+                </td>
+                <td>{item.endereco}</td>
               </tr>
             ))}
           </tbody>
