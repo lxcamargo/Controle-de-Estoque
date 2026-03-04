@@ -43,6 +43,12 @@ import SaldoConsolidado from "./SaldoConsolidado.jsx";
 // ✅ Novo componente de transferência de endereço
 import TransferenciaEndereco from "./TransferenciaEndereco.jsx";
 
+// ✅ Novo componente de ajuste de inventário (Loja)
+import AjustarInventario from "./AjustarInventario.jsx";
+
+// ✅ Novo componente de contagem (Loja - mobile)
+import ContagemLoja from "./ContagemLoja.jsx";
+
 function CadastroProduto() {
   const location = useLocation();
   const eanRecebido = location.state?.ean || "";
@@ -127,6 +133,12 @@ export default function App() {
 
         {/* ✅ Nova rota para transferência de endereço */}
         <Route path="/transferencia-endereco" element={<TransferenciaEndereco />} />
+
+        {/* ✅ Nova rota para Ajustar Inventário da Loja */}
+        <Route path="/ajustar-inventario-loja" element={<AjustarInventario />} />
+
+        {/* ✅ Nova rota para Contagem da Loja (mobile) */}
+        <Route path="/contagem-loja" element={<ContagemLoja />} />
 
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>

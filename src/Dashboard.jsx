@@ -161,13 +161,21 @@ const Dashboard = () => {
                     <span>Movimentações Galpão → Loja</span>
                   </button>
 
+                  {/* ✅ Novo botão: Ajustar Inventário da Loja */}
+                  <button onClick={() => abrirEmNovaAba("/ajustar-inventario-loja")} className="btn-relatorio btn-verde">
+                    <i className="fas fa-tools"></i>
+                    <span>Ajustar Inventário - Loja</span>
+                  </button>
+
+                  {/* ✅ Novo botão: Contagem da Loja (mobile) */}
+                  <button onClick={() => abrirEmNovaAba("/contagem-loja")} className="btn-relatorio btn-laranja">
+                    <i className="fas fa-calculator"></i>
+                    <span>Contagem - Loja</span>
+                  </button>
+
                   {isADM && (
                     <>
-                      <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-importar")}>
-                        <i className="fas fa-file-import"></i>
-                        <span>Importar Planilha de Ajuste</span>
-                      </button>
-                      <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
+                                            <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
                         <i className="fas fa-arrow-circle-down"></i>
                         <span>Realizar Baixa de Estoque</span>
                       </button>
