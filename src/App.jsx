@@ -44,6 +44,7 @@ import SaldoConsolidado from "./SaldoConsolidado.jsx";
 import TransferenciaEndereco from "./TransferenciaEndereco.jsx";
 
 // ✅ Novo componente de ajuste de inventário (Loja)
+// 🔧 Corrigido: agora o caminho aponta para a raiz `src/`
 import AjustarInventario from "./AjustarInventario.jsx";
 
 // ✅ Novo componente de contagem (Loja - mobile)
