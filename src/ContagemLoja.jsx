@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import { supabase } from "./supabaseClient";
 import "./contagemLoja.css"; // ✅ novo CSS responsivo
 
@@ -10,57 +11,39 @@ export default function ContagemLoja() {
   const [validadeDigitada, setValidadeDigitada] = useState("");
   const [usarValidadeManual, setUsarValidadeManual] = useState(false);
   const [quantidade, setQuantidade] = useState("");
-  const videoRef = useRef(null);
 
   useEffect(() => {
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+    const scanner = new Html5QrcodeScanner("ean-scanner", {
+      fps: 10,
+      qrbox: { width: 250, height: 100 },
+      aspectRatio: 1.5,
+    });
 
-        // ✅ inicia o detector de código de barras
-        if ("BarcodeDetector" in window) {
-          const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8"] });
-
-          async function scan() {
-            if (videoRef.current) {
-              try {
-                const barcodes = await detector.detect(videoRef.current);
-                if (barcodes.length > 0) {
-                  const codigo = barcodes[0].rawValue;
-                  if (codigo !== ean) { // evita chamar repetidamente
-                    console.log("EAN detectado:", codigo);
-                    setEan(codigo);
-                    buscarProduto(codigo); // ✅ chama automaticamente
-                  }
-                }
-              } catch (err) {
-                console.error("Erro ao detectar código:", err);
-              }
-            }
-            requestAnimationFrame(scan);
-          }
-          scan();
-        } else {
-          console.warn("BarcodeDetector não suportado neste navegador.");
-        }
-      } catch (err) {
-        console.error("Erro ao acessar câmera traseira:", err);
+    scanner.render(
+      async (codigo) => {
+        await scanner.clear();
+        const codigoLimpo = codigo.replace(/[^\d]/g, "").trim(); // ✅ normaliza
+        console.log("EAN detectado:", codigoLimpo);
+        setEan(codigoLimpo);
+        buscarProduto(codigoLimpo); // ✅ chama automaticamente
+      },
+      (errorMessage) => {
+        if (errorMessage.includes("NotFoundException")) return;
+        console.warn("Erro de leitura:", errorMessage);
       }
-    }
-    startCamera();
+    );
+
+    return () => {
+      scanner.clear().catch((err) => console.error("Erro ao limpar scanner:", err));
+    };
   }, []);
 
   const buscarProduto = async (codigo = null) => {
-    const eanFinal = (codigo || ean).trim();
+    const eanFinal = (codigo || ean).replace(/[^\d]/g, "").trim(); // ✅ normaliza também aqui
     if (!eanFinal) return;
 
     const { data, error } = await supabase
-      .from("estoque_loja")
+      .from("estoque_loja") // confirme se é a tabela correta
       .select("nome, marca, descricao, validade, quantidade")
       .eq("ean", eanFinal);
 
@@ -73,12 +56,12 @@ export default function ContagemLoja() {
       setProduto({
         nome: data[0].nome,
         marca: data[0].marca,
-        descricao: data[0].descricao
+        descricao: data[0].descricao,
       });
 
       const validadesComSaldo = data
-        .filter(item => item.quantidade > 0)
-        .map(item => item.validade);
+        .filter((item) => item.quantidade > 0)
+        .map((item) => item.validade);
 
       const validadesUnicas = [...new Set(validadesComSaldo)];
       setValidadesDisponiveis(validadesUnicas);
@@ -103,7 +86,7 @@ export default function ContagemLoja() {
       marca: produto?.marca || "",
       validade: validadeFinal,
       quantidade: parseInt(quantidade, 10),
-      data_contagem: new Date().toISOString()
+      data_contagem: new Date().toISOString(),
     });
 
     if (error) {
@@ -126,7 +109,8 @@ export default function ContagemLoja() {
       <h2>📱 Contagem de Estoque - Loja</h2>
 
       <div className="camera-box">
-        <video ref={videoRef} autoPlay playsInline />
+        {/* ✅ scanner html5-qrcode substitui o <video> */}
+        <div id="ean-scanner" style={{ width: "100%" }}></div>
       </div>
 
       <div className="input-row">
