@@ -15,12 +15,14 @@ export default function ContagemLoja() {
   useEffect(() => {
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: "environment" } } // ✅ força câmera traseira
+        });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
       } catch (err) {
-        console.error("Erro ao acessar câmera:", err);
+        console.error("Erro ao acessar câmera traseira:", err);
       }
     }
     startCamera();
