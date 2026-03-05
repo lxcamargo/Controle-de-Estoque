@@ -12,7 +12,8 @@ export default function ContagemLoja() {
   const [usarValidadeManual, setUsarValidadeManual] = useState(false);
   const [quantidade, setQuantidade] = useState("");
 
-  useEffect(() => {
+  // ✅ função para iniciar scanner
+  const iniciarScanner = () => {
     const scanner = new Html5QrcodeScanner("ean-scanner", {
       fps: 10,
       qrbox: { width: 250, height: 100 },
@@ -22,28 +23,33 @@ export default function ContagemLoja() {
     scanner.render(
       async (codigo) => {
         await scanner.clear();
-        const codigoLimpo = codigo.replace(/[^\d]/g, "").trim(); // ✅ normaliza
+        const codigoLimpo = codigo.replace(/[^\d]/g, "").trim();
         console.log("EAN detectado:", codigoLimpo);
         setEan(codigoLimpo);
-        buscarProduto(codigoLimpo); // ✅ chama automaticamente
+        buscarProduto(codigoLimpo);
       },
       (errorMessage) => {
         if (errorMessage.includes("NotFoundException")) return;
         console.warn("Erro de leitura:", errorMessage);
       }
     );
+  };
 
+  useEffect(() => {
+    iniciarScanner();
     return () => {
+      // limpa scanner ao desmontar
+      const scanner = new Html5QrcodeScanner("ean-scanner", {});
       scanner.clear().catch((err) => console.error("Erro ao limpar scanner:", err));
     };
   }, []);
 
   const buscarProduto = async (codigo = null) => {
-    const eanFinal = (codigo || ean).replace(/[^\d]/g, "").trim(); // ✅ normaliza também aqui
+    const eanFinal = (codigo || ean).replace(/[^\d]/g, "").trim();
     if (!eanFinal) return;
 
     const { data, error } = await supabase
-      .from("estoque_loja") // confirme se é a tabela correta
+      .from("estoque_loja")
       .select("nome, marca, descricao, validade, quantidade")
       .eq("ean", eanFinal);
 
@@ -101,6 +107,9 @@ export default function ContagemLoja() {
       setValidadeDigitada("");
       setUsarValidadeManual(false);
       setQuantidade("");
+
+      // ✅ reinicia scanner automaticamente
+      iniciarScanner();
     }
   };
 
@@ -109,7 +118,6 @@ export default function ContagemLoja() {
       <h2>📱 Contagem de Estoque - Loja</h2>
 
       <div className="camera-box">
-        {/* ✅ scanner html5-qrcode substitui o <video> */}
         <div id="ean-scanner" style={{ width: "100%" }}></div>
       </div>
 
