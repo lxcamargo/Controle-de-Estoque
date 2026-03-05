@@ -36,6 +36,19 @@ export default function AjustarInventario() {
             }
           }
 
+          // ✅ Regra extra: se ainda não tiver descrição, tenta garantir pelo produto
+          if (!descricao) {
+            const { data: produtoInfo } = await supabase
+              .from("produto")
+              .select("descricao")
+              .eq("ean", item.ean)
+              .maybeSingle();
+
+            if (produtoInfo) {
+              descricao = produtoInfo.descricao;
+            }
+          }
+
           // Busca saldo atual no estoque
           const { data: estoqueData } = await supabase
             .from("estoque_loja")
