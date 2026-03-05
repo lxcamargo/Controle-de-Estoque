@@ -16,10 +16,37 @@ export default function ContagemLoja() {
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: "environment" } } // ✅ força câmera traseira
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+        }
+
+        // ✅ inicia o detector de código de barras
+        if ("BarcodeDetector" in window) {
+          const detector = new BarcodeDetector({ formats: ["ean_13", "ean_8"] });
+
+          async function scan() {
+            if (videoRef.current) {
+              try {
+                const barcodes = await detector.detect(videoRef.current);
+                if (barcodes.length > 0) {
+                  const codigo = barcodes[0].rawValue;
+                  if (codigo !== ean) { // evita chamar repetidamente
+                    console.log("EAN detectado:", codigo);
+                    setEan(codigo);
+                    buscarProduto(codigo); // ✅ chama automaticamente
+                  }
+                }
+              } catch (err) {
+                console.error("Erro ao detectar código:", err);
+              }
+            }
+            requestAnimationFrame(scan);
+          }
+          scan();
+        } else {
+          console.warn("BarcodeDetector não suportado neste navegador.");
         }
       } catch (err) {
         console.error("Erro ao acessar câmera traseira:", err);
@@ -28,14 +55,14 @@ export default function ContagemLoja() {
     startCamera();
   }, []);
 
-  const buscarProduto = async () => {
-    if (!ean) return;
-    const eanLimpo = ean.trim();
+  const buscarProduto = async (codigo = null) => {
+    const eanFinal = (codigo || ean).trim();
+    if (!eanFinal) return;
 
     const { data, error } = await supabase
       .from("estoque_loja")
       .select("nome, marca, descricao, validade, quantidade")
-      .eq("ean", eanLimpo);
+      .eq("ean", eanFinal);
 
     if (error || !data || data.length === 0) {
       alert("Produto não encontrado!");
@@ -109,7 +136,7 @@ export default function ContagemLoja() {
           onChange={(e) => setEan(e.target.value)}
           placeholder="Digite ou bipar EAN"
         />
-        <button onClick={buscarProduto}>Buscar Produto</button>
+        <button onClick={() => buscarProduto()}>Buscar Produto</button>
       </div>
 
       {produto && (
