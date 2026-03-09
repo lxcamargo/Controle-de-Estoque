@@ -11,6 +11,7 @@ export default function ContagemLoja() {
   const [validadeDigitada, setValidadeDigitada] = useState("");
   const [usarValidadeManual, setUsarValidadeManual] = useState(false);
   const [quantidade, setQuantidade] = useState("");
+  const [consolidado, setConsolidado] = useState([]); // ✅ novo estado
 
   // ✅ função para iniciar scanner
   const iniciarScanner = () => {
@@ -27,6 +28,7 @@ export default function ContagemLoja() {
         console.log("EAN detectado:", codigoLimpo);
         setEan(codigoLimpo);
         buscarProduto(codigoLimpo);
+        buscarConsolidado(codigoLimpo); // ✅ busca consolidado também
       },
       (errorMessage) => {
         if (errorMessage.includes("NotFoundException")) return;
@@ -37,6 +39,7 @@ export default function ContagemLoja() {
 
   useEffect(() => {
     iniciarScanner();
+    buscarConsolidado(); // ✅ carrega consolidação ao abrir
     return () => {
       const scanner = new Html5QrcodeScanner("ean-scanner", {});
       scanner.clear().catch((err) => console.error("Erro ao limpar scanner:", err));
@@ -77,6 +80,46 @@ export default function ContagemLoja() {
     }
   };
 
+  // ✅ consolida direto no React
+  const consolidarDados = (dados) => {
+    const mapa = {};
+    dados.forEach((item) => {
+      const chave = `${item.ean}-${item.validade}`;
+      if (!mapa[chave]) {
+        mapa[chave] = {
+          ean: item.ean,
+          validade: item.validade,
+          descricao: item.descricao,
+          marca: item.marca,
+          quantidade: 0,
+        };
+      }
+      mapa[chave].quantidade += item.quantidade;
+    });
+    return Object.values(mapa);
+  };
+
+  const buscarConsolidado = async (codigo = null) => {
+    const eanFinal = (codigo || ean).replace(/[^\d]/g, "").trim();
+
+    let query = supabase.from("contagem_loja")
+      .select("ean, validade, descricao, marca, quantidade");
+
+    if (eanFinal) {
+      query = query.eq("ean", eanFinal);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Erro ao buscar consolidado:", error);
+      setConsolidado([]);
+    } else {
+      const dadosConsolidados = consolidarDados(data);
+      setConsolidado(dadosConsolidados);
+    }
+  };
+
   const salvarContagem = async () => {
     const validadeFinal = usarValidadeManual ? validadeDigitada : validadeSelecionada;
 
@@ -85,14 +128,14 @@ export default function ContagemLoja() {
       return;
     }
 
-    const { error } = await supabase.from("contagem_loja").upsert({
+    const { error } = await supabase.from("contagem_loja").insert({
       ean: ean.trim(),
       descricao: produto?.descricao || "",
       marca: produto?.marca || "",
       validade: validadeFinal,
       quantidade: parseInt(quantidade, 10),
       data_contagem: new Date().toISOString(),
-    }, { onConflict: ["ean", "validade"] }); // ✅ consolida direto no banco
+    });
 
     if (error) {
       console.error("Erro ao salvar:", error);
@@ -106,8 +149,7 @@ export default function ContagemLoja() {
       setValidadeDigitada("");
       setUsarValidadeManual(false);
       setQuantidade("");
-
-      // ✅ reinicia scanner automaticamente
+      buscarConsolidado(); // ✅ atualiza consolidação após salvar
       iniciarScanner();
     }
   };
@@ -127,7 +169,9 @@ export default function ContagemLoja() {
           onChange={(e) => setEan(e.target.value)}
           placeholder="Digite ou bipar EAN"
         />
-        <button onClick={() => buscarProduto()}>Buscar Produto</button>
+        <button onClick={() => { buscarProduto(); buscarConsolidado(); }}>
+          Buscar Produto
+        </button>
       </div>
 
       {produto && (
@@ -135,6 +179,20 @@ export default function ContagemLoja() {
           <p><strong>Nome:</strong> {produto.nome}</p>
           <p><strong>Marca:</strong> {produto.marca}</p>
           <p><strong>Descrição:</strong> {produto.descricao}</p>
+        </div>
+      )}
+
+      {/* ✅ bloco novo para mostrar consolidação */}
+      {consolidado && consolidado.length > 0 && (
+        <div className="consolidado-box">
+          <h3>📊 Ajuste de Inventário Consolidado</h3>
+          {consolidado.map((item, idx) => (
+            <p key={idx}>
+              <strong>EAN:</strong> {item.ean} | 
+              <strong>Validade:</strong> {item.validade} | 
+              <strong>Total:</strong> {item.quantidade}
+            </p>
+          ))}
         </div>
       )}
 
