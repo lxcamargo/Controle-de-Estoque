@@ -1,0 +1,32 @@
+/* estilo geral da tabela */
+.EstoqueConsolidado {
+  width: 100%;
+  border-collapse: collapse; /* garante que as bordas se unam */
+  font-family: Arial, sans-serif;
+}
+
+/* cabeçalho */
+.EstoqueConsolidado th {
+  background-color: #f2f2f2;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid #ddd; /* borda em cada célula */
+}
+
+/* células */
+.EstoqueConsolidado td {
+  padding: 8px 12px;
+  border: 1px solid #ddd; /* borda em cada célula */
+}
+
+/* coluna validade */
+.EstoqueConsolidado td.validade {
+  white-space: nowrap;   /* impede quebra de linha */
+  min-width: 120px;      /* garante espaço horizontal */
+  text-align: center;    /* centraliza a data */
+}
+
+/* alternância de cor nas linhas */
+.EstoqueConsolidado tr:nth-child(even) {
+  background-color: #fafafa;
+}
