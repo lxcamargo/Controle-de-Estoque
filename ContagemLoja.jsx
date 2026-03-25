@@ -11,7 +11,11 @@ export default function ContagemLoja() {
   const [validadeDigitada, setValidadeDigitada] = useState("");
   const [usarValidadeManual, setUsarValidadeManual] = useState(false);
   const [quantidade, setQuantidade] = useState("");
-  const [consolidado, setConsolidado] = useState([]); // ✅ novo estado
+  const [contagens, setContagens] = useState([]);
+
+  // ✅ Recupera usuário logado do sistema (salvo no localStorage pelo login)
+  const usuarioLogado =
+    localStorage.getItem("usuarioEmail") || localStorage.getItem("usuarioLogado") || "Desconhecido";
 
   // ✅ função para iniciar scanner
   const iniciarScanner = () => {
@@ -28,7 +32,7 @@ export default function ContagemLoja() {
         console.log("EAN detectado:", codigoLimpo);
         setEan(codigoLimpo);
         buscarProduto(codigoLimpo);
-        buscarConsolidado(codigoLimpo); // ✅ busca consolidado também
+        carregarContagens();
       },
       (errorMessage) => {
         if (errorMessage.includes("NotFoundException")) return;
@@ -39,7 +43,7 @@ export default function ContagemLoja() {
 
   useEffect(() => {
     iniciarScanner();
-    buscarConsolidado(); // ✅ carrega consolidação ao abrir
+    carregarContagens();
     return () => {
       const scanner = new Html5QrcodeScanner("ean-scanner", {});
       scanner.clear().catch((err) => console.error("Erro ao limpar scanner:", err));
@@ -80,43 +84,17 @@ export default function ContagemLoja() {
     }
   };
 
-  // ✅ consolida direto no React
-  const consolidarDados = (dados) => {
-    const mapa = {};
-    dados.forEach((item) => {
-      const chave = `${item.ean}-${item.validade}`;
-      if (!mapa[chave]) {
-        mapa[chave] = {
-          ean: item.ean,
-          validade: item.validade,
-          descricao: item.descricao,
-          marca: item.marca,
-          quantidade: 0,
-        };
-      }
-      mapa[chave].quantidade += item.quantidade;
-    });
-    return Object.values(mapa);
-  };
-
-  const buscarConsolidado = async (codigo = null) => {
-    const eanFinal = (codigo || ean).replace(/[^\d]/g, "").trim();
-
-    let query = supabase.from("contagem_loja")
-      .select("ean, validade, descricao, marca, quantidade");
-
-    if (eanFinal) {
-      query = query.eq("ean", eanFinal);
-    }
-
-    const { data, error } = await query;
+  const carregarContagens = async () => {
+    const { data, error } = await supabase
+      .from("contagem_loja")
+      .select("ean, descricao, marca, validade, quantidade, usuario, data_contagem")
+      .order("data_contagem", { ascending: false });
 
     if (error) {
-      console.error("Erro ao buscar consolidado:", error);
-      setConsolidado([]);
+      console.error("Erro ao carregar contagens:", error);
+      setContagens([]);
     } else {
-      const dadosConsolidados = consolidarDados(data);
-      setConsolidado(dadosConsolidados);
+      setContagens(data || []);
     }
   };
 
@@ -134,6 +112,7 @@ export default function ContagemLoja() {
       marca: produto?.marca || "",
       validade: validadeFinal,
       quantidade: parseInt(quantidade, 10),
+      usuario: usuarioLogado, // ✅ agora pega do localStorage corretamente
       data_contagem: new Date().toISOString(),
     });
 
@@ -149,7 +128,7 @@ export default function ContagemLoja() {
       setValidadeDigitada("");
       setUsarValidadeManual(false);
       setQuantidade("");
-      buscarConsolidado(); // ✅ atualiza consolidação após salvar
+      carregarContagens();
       iniciarScanner();
     }
   };
@@ -169,7 +148,7 @@ export default function ContagemLoja() {
           onChange={(e) => setEan(e.target.value)}
           placeholder="Digite ou bipar EAN"
         />
-        <button onClick={() => { buscarProduto(); buscarConsolidado(); }}>
+        <button onClick={() => { buscarProduto(); carregarContagens(); }}>
           Buscar Produto
         </button>
       </div>
@@ -182,15 +161,16 @@ export default function ContagemLoja() {
         </div>
       )}
 
-      {/* ✅ bloco novo para mostrar consolidação */}
-      {consolidado && consolidado.length > 0 && (
+      {contagens && contagens.length > 0 && (
         <div className="consolidado-box">
-          <h3>📊 Ajuste de Inventário Consolidado</h3>
-          {consolidado.map((item, idx) => (
+          <h3>📊 Contagens Realizadas</h3>
+          {contagens.map((item, idx) => (
             <p key={idx}>
               <strong>EAN:</strong> {item.ean} | 
               <strong>Validade:</strong> {item.validade} | 
-              <strong>Total:</strong> {item.quantidade}
+              <strong>Quantidade:</strong> {item.quantidade} | 
+              <strong>Usuário:</strong> {item.usuario} | 
+              <strong>Data/Hora:</strong> {new Date(item.data_contagem).toLocaleString("pt-BR")}
             </p>
           ))}
         </div>

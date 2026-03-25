@@ -175,12 +175,18 @@ const Dashboard = () => {
 
                   {isADM && (
                     <>
-                                            <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
+                      <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
                         <i className="fas fa-arrow-circle-down"></i>
                         <span>Realizar Baixa de Estoque</span>
                       </button>
                     </>
                   )}
+
+                                   {/* ✅ Novo botão: Saldo_Galpao_Loja */}
+                  <button onClick={() => abrirEmNovaAba("/saldo_galpao_loja")} className="btn-relatorio btn-azul">
+                    <i className="fas fa-store"></i>
+                    <span>Saldo_Galpao_Loja</span>
+                  </button>
                 </div>
               </section>
             </>
@@ -196,6 +202,12 @@ const Dashboard = () => {
                   <i className="fas fa-vial"></i>
                   <span>Painel de Validade - Loja</span>
                 </button>
+
+                {/* ✅ Novo botão: Contagem Consolidada */}
+                <button onClick={() => abrirEmNovaAba("/contagem-consolidada")} className="btn-relatorio btn-roxo">
+                  <i className="fas fa-layer-group"></i>
+                  <span>Contagem Consolidada</span>
+                </button>
               </div>
             </section>
           )}
@@ -205,4 +217,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Dashboard; 
