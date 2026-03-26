@@ -26,7 +26,6 @@ import ImportarEstoqueLoja from "./ImportarEstoqueLoja.jsx";
 import SaidaProdutoLoja from "./SaidaProdutoLoja.jsx";
 import PainelValidadeLoja from "./PainelValidadeLoja.jsx";
 import HistoricoSaidaLoja from "./HistoricoSaidaLoja.jsx";
-import EstoqueConsolidado from "./EstoqueConsolidado.jsx";
 
 // ✅ Novo componente para movimentações galpão → loja
 import MovimentacoesGalpaoLoja from "./MovimentacoesGalpaoLoja.jsx";
@@ -45,13 +44,11 @@ import SaldoConsolidado from "./SaldoConsolidado.jsx";
 import TransferenciaEndereco from "./TransferenciaEndereco.jsx";
 
 // ✅ Novo componente de ajuste de inventário (Loja)
+// 🔧 Corrigido: agora o caminho aponta para a raiz `src/`
 import AjustarInventario from "./AjustarInventario.jsx";
 
 // ✅ Novo componente de contagem (Loja - mobile)
 import ContagemLoja from "./ContagemLoja.jsx";
-
-// ✅ Novo componente de contagem consolidada
-import PainelContagemConsolidada from "./PainelContagemConsolidada.jsx";
 
 function CadastroProduto() {
   const location = useLocation();
@@ -121,7 +118,6 @@ export default function App() {
         <Route path="/importar-estoque-loja" element={<ImportarEstoqueLoja />} />
         <Route path="/painel-validade-loja" element={<PainelValidadeLoja />} />
         <Route path="/historico-saidas-loja" element={<HistoricoSaidaLoja />} />
-        <Route path="/saldo_galpao_loja" element={<EstoqueConsolidado />} />
 
         {/* ✅ Nova rota para movimentações entre setores */}
         <Route path="/movimentacoes-galpao-loja" element={<MovimentacoesGalpaoLoja />} />
@@ -144,9 +140,6 @@ export default function App() {
 
         {/* ✅ Nova rota para Contagem da Loja (mobile) */}
         <Route path="/contagem-loja" element={<ContagemLoja />} />
-
-        {/* ✅ Nova rota para Contagem Consolidada */}
-        <Route path="/contagem-consolidada" element={<PainelContagemConsolidada />} />
 
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>

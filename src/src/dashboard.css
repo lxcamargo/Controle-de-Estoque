@@ -1,0 +1,152 @@
+/* ✅ Borda azul em volta da tela inteira */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  border: 6px solid #2196f3;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* ✅ Camada semitransparente para legibilidade */
+.overlay {
+  background-color: rgba(255, 255, 255, 0.85);
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 1280px;
+  margin: 2rem auto;
+}
+
+/* ✅ Título centralizado no meio da tela */
+.titulo-centralizado {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #2196f3;
+  color: white;
+  padding: 1rem 2rem;
+  font-size: 1.6rem;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+/* ✅ Container principal — agora com imagem de fundo exclusiva */
+.dashboard-container {
+  padding: 40px 20px;
+  max-width: 1280px;
+  margin: 0 auto;
+  background-image: url("/jose-vs-bbb.png"); /* caminho corrigido */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 16px;
+}
+/* ✅ Seções e títulos */
+.dashboard-section {
+  margin-bottom: 60px;
+}
+
+.dashboard-section h2 {
+  font-size: 1.4rem;
+  color: #ffffff !important;
+  margin-bottom: 20px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.dashboard-subsection {
+  margin-bottom: 40px;
+}
+
+.dashboard-subsection h3 {
+  font-size: 1.2rem;
+  color: #ffffff !important;
+  margin-bottom: 16px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ✅ Botões lado a lado com espaçamento aumentado */
+.button-row,
+.button-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px 48px;
+  margin-bottom: 24px;
+  justify-content: flex-start;
+}
+
+/* 🔹 Botões menores e mais elegantes */
+.button-row button,
+.button-grid button {
+  background-color: #ffffff;
+  color: #2196f3;
+  border: 2px solid #2196f3;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  min-width: 180px;
+}
+
+.button-row button:hover,
+.button-grid button:hover {
+  background-color: #e3f2fd;
+  border-color: #1976d2;
+  transform: scale(1.04);
+}
+
+.button-row button:active,
+.button-grid button:active {
+  transform: scale(0.95);
+}
+
+/* 🔸 Responsividade */
+@media (max-width: 600px) {
+  .button-row,
+  .button-grid {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  .button-row button,
+  .button-grid button {
+    width: 100%;
+    font-size: 0.9rem;
+    padding: 10px 14px;
+  }
+}
+
+/* ✅ Título principal do dashboard com letras brancas */
+.titulo-dashboard {
+  color: #ffffff;
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ✅ Menus principais com letras brancas */
+.section-title {
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+/* ✅ Títulos internos como Operações, Cadastros e Relatórios com letras brancas */
+.dashboard-section h3 {
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
+}
