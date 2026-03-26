@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Login from "./Login.jsx";
@@ -44,11 +43,13 @@ import SaldoConsolidado from "./SaldoConsolidado.jsx";
 import TransferenciaEndereco from "./TransferenciaEndereco.jsx";
 
 // ✅ Novo componente de ajuste de inventário (Loja)
-// 🔧 Corrigido: agora o caminho aponta para a raiz `src/`
 import AjustarInventario from "./AjustarInventario.jsx";
 
 // ✅ Novo componente de contagem (Loja - mobile)
 import ContagemLoja from "./ContagemLoja.jsx";
+
+// ✅ Novo componente de Saldo Galpão Loja
+import EstoqueConsolidado from "./EstoqueConsolidado.jsx";
 
 function CadastroProduto() {
   const location = useLocation();
@@ -140,6 +141,9 @@ export default function App() {
 
         {/* ✅ Nova rota para Contagem da Loja (mobile) */}
         <Route path="/contagem-loja" element={<ContagemLoja />} />
+
+        {/* ✅ Nova rota para Saldo Galpão Loja */}
+        <Route path="/saldo-galpao-loja" element={<EstoqueConsolidado />} />
 
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>

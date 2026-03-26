@@ -72,30 +72,28 @@ export default function EstoqueConsolidado() {
   };
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>Saldo Galpão & Loja</h1>
+    <div className="estoque-consolidado">
+      <h1>📦 Saldo Galpão & Loja</h1>
 
-      <div style={{ marginBottom: "20px" }}>
+      <div className="totais">
         <h3>Totais</h3>
         <p><strong>Total Loja:</strong> {totais.loja}</p>
         <p><strong>Total Galpão:</strong> {totais.galpao}</p>
         <p><strong>Total Geral:</strong> {totais.loja + totais.galpao}</p>
       </div>
 
-      <div style={{ marginBottom: "20px" }}>
+      <div className="filtros">
         <input
           type="text"
           placeholder="Filtrar por EAN"
           value={filtroEan}
           onChange={e => setFiltroEan(e.target.value)}
-          style={{ marginRight: "10px" }}
         />
         <input
           type="text"
           placeholder="Filtrar por Marca"
           value={filtroMarca}
           onChange={e => setFiltroMarca(e.target.value)}
-          style={{ marginRight: "10px" }}
         />
         <input
           type="text"
@@ -105,9 +103,9 @@ export default function EstoqueConsolidado() {
         />
       </div>
 
-      <button onClick={exportarExcel}>Exportar para Excel</button>
+      <button onClick={exportarExcel}>📤 Exportar para Excel</button>
 
-      <table className="EstoqueConsolidado" style={{ marginTop: "20px" }}>
+      <table className="EstoqueConsolidado">
         <thead>
           <tr>
             <th>EAN</th>
