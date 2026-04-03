@@ -161,6 +161,12 @@ const Dashboard = () => {
                     <span>Movimentações Galpão → Loja</span>
                   </button>
 
+                  {/* ✅ Novo botão: Saldo Galpão Loja */}
+                  <button onClick={() => abrirEmNovaAba("/saldo-galpao-loja")} className="btn-relatorio btn-azul">
+                    <i className="fas fa-warehouse"></i>
+                    <span>Saldo Galpão Loja</span>
+                  </button>
+
                   {/* ✅ Novo botão: Ajustar Inventário da Loja */}
                   <button onClick={() => abrirEmNovaAba("/ajustar-inventario-loja")} className="btn-relatorio btn-verde">
                     <i className="fas fa-tools"></i>
@@ -177,44 +183,32 @@ const Dashboard = () => {
                     <>
                       <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
                         <i className="fas fa-arrow-circle-down"></i>
-                        <span>Realizar Baixa de Estoque</span>
-                      </button>
-                    </>
-                  )}
-
-                                   {/* ✅ Novo botão: Saldo_Galpao_Loja */}
-                  <button onClick={() => abrirEmNovaAba("/saldo_galpao_loja")} className="btn-relatorio btn-azul">
-                    <i className="fas fa-store"></i>
-                    <span>Saldo_Galpao_Loja</span>
-                  </button>
-                </div>
-              </section>
-            </>
-          ) : (
-            <p className="alert alert-warning">🚫 Você não tem permissão para acessar operações da loja.</p>
-          )}
-
-          {podeVerPainelLoja && (
-            <section className="dashboard-section">
-              <h3>📊 Relatórios</h3>
-              <div className="button-grid">
-                <button onClick={() => abrirEmNovaAba("/painel-validade-loja")} className="btn-relatorio btn-laranja">
-                  <i className="fas fa-vial"></i>
-                  <span>Painel de Validade - Loja</span>
-                </button>
-
-                {/* ✅ Novo botão: Contagem Consolidada */}
-                <button onClick={() => abrirEmNovaAba("/contagem-consolidada")} className="btn-relatorio btn-roxo">
-                  <i className="fas fa-layer-group"></i>
-                  <span>Contagem Consolidada</span>
-                </button>
+                                              <span>Realizar Baixa de Estoque</span>
+                    </button>
+                  </>
+                )}
               </div>
             </section>
-          )}
-        </details>
-      </div>
+          </>
+        ) : (
+          <p className="alert alert-warning">🚫 Você não tem permissão para acessar operações da loja.</p>
+        )}
+
+        {podeVerPainelLoja && (
+          <section className="dashboard-section">
+            <h3>📊 Relatórios</h3>
+            <div className="button-grid">
+              <button onClick={() => abrirEmNovaAba("/painel-validade-loja")} className="btn-relatorio btn-laranja">
+                <i className="fas fa-vial"></i>
+                <span>Painel de Validade - Loja</span>
+              </button>
+            </div>
+          </section>
+        )}
+      </details>
     </div>
+  </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

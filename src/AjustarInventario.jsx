@@ -8,7 +8,7 @@ export default function AjustarInventario() {
     const carregar = async () => {
       const { data: contagemData, error: erroContagem } = await supabase
         .from("contagem_loja")
-        .select("*"); // ✅ já inclui o campo usuario
+        .select("*");
 
       if (erroContagem) {
         console.error("Erro ao carregar contagens:", erroContagem);
@@ -69,15 +69,7 @@ export default function AjustarInventario() {
             status = "Igual";
           }
 
-          return {
-            ...item,
-            nome,
-            marca,
-            descricao,
-            saldo: saldo ?? 0,
-            status,
-            usuario: item.usuario // ✅ garante que o usuário venha junto
-          };
+          return { ...item, nome, marca, descricao, saldo: saldo ?? 0, status };
         })
       );
 
@@ -86,6 +78,54 @@ export default function AjustarInventario() {
 
     carregar();
   }, []);
+
+  const ajustarSaldo = async (ean, quantidade, validade, nome, marca, descricao, status, id) => {
+    if (status === "Novo") {
+      const { error } = await supabase
+        .from("estoque_loja")
+        .insert({
+          ean,
+          validade,
+          quantidade,
+          nome: nome || descricao,
+          marca,
+          descricao
+        });
+
+      if (error) {
+        console.error("Erro ao inserir estoque:", error);
+        alert("Erro ao inserir estoque!");
+        return;
+      }
+    } else if (status === "Maior" || status === "Menor") {
+      const { error } = await supabase
+        .from("estoque_loja")
+        .update({ quantidade })
+        .eq("ean", ean)
+        .eq("validade", validade);
+
+      if (error) {
+        console.error("Erro ao atualizar estoque:", error);
+        alert("Erro ao atualizar estoque!");
+        return;
+      }
+    }
+
+    // ✅ Remove também da tabela contagem_loja
+    const { error: erroDelete } = await supabase
+      .from("contagem_loja")
+      .delete()
+      .eq("id", id);
+
+    if (erroDelete) {
+      console.error("Erro ao apagar contagem:", erroDelete);
+    }
+
+    // Remove da tela
+    setContagens(prev => prev.filter(item => item.id !== id));
+
+    alert("Saldo ajustado com sucesso!");
+  };
 
   return (
     <div style={{ padding: "1rem" }}>
@@ -101,8 +141,7 @@ export default function AjustarInventario() {
             <th>Quantidade Contada</th>
             <th>Saldo Estoque</th>
             <th>Status</th>
-            <th>Usuário</th>
-            <th>Data/Hora Contagem</th>
+            <th>Ação</th>
           </tr>
         </thead>
         <tbody>
@@ -130,8 +169,24 @@ export default function AjustarInventario() {
               >
                 {item.status}
               </td>
-              <td>{item.usuario}</td> {/* ✅ mostra o usuário corretamente */}
-              <td>{new Date(item.data_contagem).toLocaleString("pt-BR")}</td>
+              <td>
+                <button
+                  onClick={() =>
+                    ajustarSaldo(
+                      item.ean,
+                      item.quantidade,
+                      item.validade,
+                      item.nome,
+                      item.marca,
+                      item.descricao,
+                      item.status,
+                      item.id
+                    )
+                  }
+                >
+                  Ajustar
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

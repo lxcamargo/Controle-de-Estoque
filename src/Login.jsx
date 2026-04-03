@@ -51,11 +51,7 @@ export default function Login() {
       // ✅ Salva dados no localStorage
       localStorage.removeItem("usuarioEmail");
       localStorage.setItem("usuarioEmail", usuario.email);
-      localStorage.setItem("tipoUsuario", usuario.tipo?.toLowerCase()); // compatível com adm_loja e adm_galpao
-
-      // ✅ NOVO: salva também o usuário logado para a tela de contagem
-      localStorage.setItem("usuarioLogado", usuario.email);
-
+      localStorage.setItem("tipoUsuario", usuario.tipo?.toLowerCase()); // ← compatível com adm_loja e adm_galpao
       console.log("🔐 Login realizado por:", usuario.email);
 
       // ✅ Redirecionamento universal para dashboard

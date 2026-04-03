@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Login from "./Login.jsx";
@@ -26,7 +25,6 @@ import ImportarEstoqueLoja from "./ImportarEstoqueLoja.jsx";
 import SaidaProdutoLoja from "./SaidaProdutoLoja.jsx";
 import PainelValidadeLoja from "./PainelValidadeLoja.jsx";
 import HistoricoSaidaLoja from "./HistoricoSaidaLoja.jsx";
-import EstoqueConsolidado from "./EstoqueConsolidado.jsx";
 
 // ✅ Novo componente para movimentações galpão → loja
 import MovimentacoesGalpaoLoja from "./MovimentacoesGalpaoLoja.jsx";
@@ -50,8 +48,8 @@ import AjustarInventario from "./AjustarInventario.jsx";
 // ✅ Novo componente de contagem (Loja - mobile)
 import ContagemLoja from "./ContagemLoja.jsx";
 
-// ✅ Novo componente de contagem consolidada
-import PainelContagemConsolidada from "./PainelContagemConsolidada.jsx";
+// ✅ Novo componente de Saldo Galpão Loja
+import EstoqueConsolidado from "./EstoqueConsolidado.jsx";
 
 function CadastroProduto() {
   const location = useLocation();
@@ -121,7 +119,6 @@ export default function App() {
         <Route path="/importar-estoque-loja" element={<ImportarEstoqueLoja />} />
         <Route path="/painel-validade-loja" element={<PainelValidadeLoja />} />
         <Route path="/historico-saidas-loja" element={<HistoricoSaidaLoja />} />
-        <Route path="/saldo_galpao_loja" element={<EstoqueConsolidado />} />
 
         {/* ✅ Nova rota para movimentações entre setores */}
         <Route path="/movimentacoes-galpao-loja" element={<MovimentacoesGalpaoLoja />} />
@@ -145,8 +142,8 @@ export default function App() {
         {/* ✅ Nova rota para Contagem da Loja (mobile) */}
         <Route path="/contagem-loja" element={<ContagemLoja />} />
 
-        {/* ✅ Nova rota para Contagem Consolidada */}
-        <Route path="/contagem-consolidada" element={<PainelContagemConsolidada />} />
+        {/* ✅ Nova rota para Saldo Galpão Loja */}
+        <Route path="/saldo-galpao-loja" element={<EstoqueConsolidado />} />
 
         <Route path="*" element={<PaginaNaoEncontrada />} />
       </Routes>
