@@ -1,9 +1,9 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import App from "./App.jsx";   // ✅ importa com extensão correta
 import "./index.css";
 
-// Verifica se o elemento root existe antes de renderizar
+// Ponto de entrada da aplicação React
 const rootElement = document.getElementById("root");
 
 if (rootElement) {

@@ -5,10 +5,10 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
+      },
     },
-  },
   optimizeDeps: {
     include: ['xlsx'],  // adiciona aqui para o Vite pré-bundlar o xlsx
   },
