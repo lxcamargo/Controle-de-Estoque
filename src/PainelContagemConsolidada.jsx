@@ -11,6 +11,7 @@ export default function PainelContagemConsolidada() {
   }, []);
 
   const carregarDados = async () => {
+    // Busca as contagens consolidadas
     const { data, error } = await supabase
       .from("contagem_consolidada")
       .select("ean, descricao, marca, validade, quantidade_total")
@@ -20,13 +21,39 @@ export default function PainelContagemConsolidada() {
       setErro("Erro ao carregar dados.");
       setContagens([]);
     } else {
-      setContagens(data || []);
+      // Para cada item consolidado, busca o saldo atual em estoque_loja (comparando por ean + validade)
+      const dadosComSaldo = await Promise.all(
+        (data || []).map(async (item) => {
+          const validadeISO =
+            typeof item.validade === "string"
+              ? item.validade
+              : new Date(item.validade + "T00:00:00").toISOString().split("T")[0];
+
+          const { data: estoque, error: erroEstoque } = await supabase
+            .from("estoque_loja")
+            .select("quantidade")
+            .eq("ean", item.ean)
+            .eq("validade", validadeISO)
+            .maybeSingle();
+
+          return {
+            ...item,
+            saldo_atual: erroEstoque ? 0 : estoque?.quantidade || 0,
+          };
+        })
+      );
+
+      setContagens(dadosComSaldo);
       setErro(null);
     }
   };
 
   const ajustarEstoque = async (ean, validade, quantidade, nome, marca) => {
-    const validadeISO = new Date(validade).toISOString().split("T")[0];
+    const validadeISO =
+      typeof validade === "string"
+        ? validade
+        : new Date(validade + "T00:00:00").toISOString().split("T")[0];
+
     const qtd = parseInt(quantidade, 10);
 
     const { data: existente, error: erroBusca } = await supabase
@@ -44,25 +71,23 @@ export default function PainelContagemConsolidada() {
 
     let error;
     if (existente) {
-      // Atualiza saldo
       const { error: erroUpdate } = await supabase
         .from("estoque_loja")
         .update({
           quantidade: qtd,
-          nome,   // atualiza descrição
-          marca,  // atualiza marca
+          nome,
+          marca,
         })
         .eq("ean", ean)
         .eq("validade", validadeISO);
       error = erroUpdate;
     } else {
-      // Insere novo registro
       const { error: erroInsert } = await supabase
         .from("estoque_loja")
         .insert({
           ean,
-          nome,              // descrição
-          marca,             // marca
+          nome,
+          marca,
           validade: validadeISO,
           quantidade: qtd,
           criado_em: new Date().toISOString(),
@@ -74,9 +99,29 @@ export default function PainelContagemConsolidada() {
       alert("Erro ao ajustar estoque!");
       console.error(error);
     } else {
+      // ✅ Remove o item da tabela contagem_consolidada
+      const { error: erroDelete } = await supabase
+        .from("contagem_consolidada")
+        .delete()
+        .eq("ean", ean)
+        .eq("validade", validadeISO);
+
+      if (erroDelete) {
+        console.error("Erro ao remover da contagem_consolidada:", erroDelete);
+      }
+
       alert("Estoque ajustado com sucesso!");
+      // ✅ Remove também da tela imediatamente
       setContagens((prev) =>
-        prev.filter((item) => !(item.ean === ean && item.validade === validade))
+        prev.filter(
+          (item) =>
+            !(
+              item.ean === ean &&
+              (typeof item.validade === "string"
+                ? item.validade
+                : new Date(item.validade + "T00:00:00").toISOString().split("T")[0]) === validadeISO
+            )
+        )
       );
     }
   };
@@ -85,7 +130,7 @@ export default function PainelContagemConsolidada() {
     <div style={{ padding: "2rem" }}>
       <h2>📊 Painel de Contagem Consolidada</h2>
       <p style={{ fontStyle: "italic", marginBottom: "1rem" }}>
-        Exibe as contagens consolidadas por EAN e validade.
+        Exibe as contagens consolidadas por EAN e validade, comparando saldo atual com contagem.
       </p>
 
       {erro && <p style={{ color: "red" }}>{erro}</p>}
@@ -108,6 +153,7 @@ export default function PainelContagemConsolidada() {
               <th style={{ width: "25%", textAlign: "left" }}>Descrição</th>
               <th style={{ width: "15%" }}>Marca</th>
               <th style={{ width: "15%" }}>Validade</th>
+              <th style={{ width: "10%" }}>Saldo Atual</th>
               <th style={{ width: "10%" }}>Qtd Consolidada</th>
               <th style={{ width: "10%" }}>Ajuste</th>
             </tr>
@@ -119,8 +165,11 @@ export default function PainelContagemConsolidada() {
                 <td style={{ textAlign: "left" }}>{item.descricao}</td>
                 <td>{item.marca}</td>
                 <td style={{ textAlign: "center" }}>
-                  {new Date(item.validade).toLocaleDateString("pt-BR")}
+                  {typeof item.validade === "string"
+                    ? new Date(item.validade + "T00:00:00").toLocaleDateString("pt-BR")
+                    : new Date(item.validade).toLocaleDateString("pt-BR")}
                 </td>
+                <td style={{ textAlign: "center" }}>{item.saldo_atual}</td>
                 <td style={{ textAlign: "center" }}>{item.quantidade_total}</td>
                 <td style={{ textAlign: "center" }}>
                   <button
@@ -129,8 +178,8 @@ export default function PainelContagemConsolidada() {
                         item.ean,
                         item.validade,
                         item.quantidade_total,
-                        item.descricao, // passa como nome
-                        item.marca       // passa marca
+                        item.descricao,
+                        item.marca
                       )
                     }
                     style={{
