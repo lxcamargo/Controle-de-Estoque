@@ -11,7 +11,6 @@ export default function ContagemLoja() {
   const [validadeDigitada, setValidadeDigitada] = useState("");
   const [usarValidadeManual, setUsarValidadeManual] = useState(false);
   const [quantidade, setQuantidade] = useState("");
-  const [contagens, setContagens] = useState([]);
 
   // ✅ Recupera usuário logado do sistema (salvo no localStorage pelo login)
   const usuarioLogado =
@@ -32,7 +31,6 @@ export default function ContagemLoja() {
         console.log("EAN detectado:", codigoLimpo);
         setEan(codigoLimpo);
         buscarProduto(codigoLimpo);
-        carregarContagens();
       },
       (errorMessage) => {
         if (errorMessage.includes("NotFoundException")) return;
@@ -43,7 +41,6 @@ export default function ContagemLoja() {
 
   useEffect(() => {
     iniciarScanner();
-    carregarContagens();
     return () => {
       const scanner = new Html5QrcodeScanner("ean-scanner", {});
       scanner.clear().catch((err) => console.error("Erro ao limpar scanner:", err));
@@ -84,20 +81,6 @@ export default function ContagemLoja() {
     }
   };
 
-  const carregarContagens = async () => {
-    const { data, error } = await supabase
-      .from("contagem_loja")
-      .select("ean, descricao, marca, validade, quantidade, usuario, data_contagem")
-      .order("data_contagem", { ascending: false });
-
-    if (error) {
-      console.error("Erro ao carregar contagens:", error);
-      setContagens([]);
-    } else {
-      setContagens(data || []);
-    }
-  };
-
   const salvarContagem = async () => {
     const validadeFinal = usarValidadeManual ? validadeDigitada : validadeSelecionada;
 
@@ -128,7 +111,6 @@ export default function ContagemLoja() {
       setValidadeDigitada("");
       setUsarValidadeManual(false);
       setQuantidade("");
-      carregarContagens();
       iniciarScanner();
     }
   };
@@ -148,7 +130,7 @@ export default function ContagemLoja() {
           onChange={(e) => setEan(e.target.value)}
           placeholder="Digite ou bipar EAN"
         />
-        <button onClick={() => { buscarProduto(); carregarContagens(); }}>
+        <button onClick={() => { buscarProduto(); }}>
           Buscar Produto
         </button>
       </div>
@@ -158,21 +140,6 @@ export default function ContagemLoja() {
           <p><strong>Nome:</strong> {produto.nome}</p>
           <p><strong>Marca:</strong> {produto.marca}</p>
           <p><strong>Descrição:</strong> {produto.descricao}</p>
-        </div>
-      )}
-
-      {contagens && contagens.length > 0 && (
-        <div className="consolidado-box">
-          <h3>📊 Contagens Realizadas</h3>
-          {contagens.map((item, idx) => (
-            <p key={idx}>
-              <strong>EAN:</strong> {item.ean} | 
-              <strong>Validade:</strong> {item.validade} | 
-              <strong>Quantidade:</strong> {item.quantidade} | 
-              <strong>Usuário:</strong> {item.usuario} | 
-              <strong>Data/Hora:</strong> {new Date(item.data_contagem).toLocaleString("pt-BR")}
-            </p>
-          ))}
         </div>
       )}
 
