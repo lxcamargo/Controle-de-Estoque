@@ -11,7 +11,7 @@ export default function SaldoConsolidado() {
   const [filtroEAN, setFiltroEAN] = useState("");
   const [filtroMarca, setFiltroMarca] = useState("");
   const [filtroDescricao, setFiltroDescricao] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState(""); // ✅ novo filtro
+  const [filtroStatus, setFiltroStatus] = useState("");
 
   useEffect(() => {
     document.title = "Saldo Consolidado";
@@ -51,15 +51,16 @@ export default function SaldoConsolidado() {
   const dadosAgrupados = Object.values(
     estoque.reduce((acc, item) => {
       const produto = produtos.find(p => p.id_produto === item.id_produto);
-      const chave = produto?.ean || "—";
+
+      // ✅ Se não achar no cadastro, usa o ean direto do estoque
+      const chave = produto?.ean || item.ean || "—";
 
       if (!acc[chave]) {
-        // ✅ corrigido: usar nomes de colunas em minúsculo
         const wms = saldoWMS.find(w => w.ean === chave);
         acc[chave] = {
           ean: chave,
-          descricao: produto?.descricao || "—",
-          marca: produto?.marca || "—",
+          descricao: produto?.descricao || item.descricao || "—",
+          marca: produto?.marca || item.marca || "—",
           quantidade: 0,
           quantidadeWMS: wms?.quantidade || 0,
           status: ""
@@ -85,7 +86,7 @@ export default function SaldoConsolidado() {
     item.ean.toLowerCase().includes(filtroEAN.toLowerCase()) &&
     item.marca.toLowerCase().includes(filtroMarca.toLowerCase()) &&
     item.descricao.toLowerCase().includes(filtroDescricao.toLowerCase()) &&
-    (filtroStatus === "" || item.status === filtroStatus) // ✅ aplica filtro de status
+    (filtroStatus === "" || item.status === filtroStatus)
   );
 
   const exportarParaExcel = () => {
@@ -128,7 +129,6 @@ export default function SaldoConsolidado() {
           value={filtroDescricao}
           onChange={e => setFiltroDescricao(e.target.value)}
         />
-        {/* ✅ Lista suspensa para Status */}
         <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
           <option value="">Todos os Status</option>
           <option value="Saldo OK">Saldo OK</option>
