@@ -27,7 +27,7 @@ const SaidaProduto = () => {
 
     const produtoInfo = { ...produtoData, id: produtoData.id_produto };
 
-    // Buscar estoques do galpão
+    // Buscar estoques do galpão ordenados por validade
     const { data: estoques, error: erroEstoque } = await supabase
       .from("estoque")
       .select("id, quantidade, validade, id_produto")
@@ -38,101 +38,71 @@ const SaidaProduto = () => {
       return "Nenhum estoque encontrado.";
     }
 
-    // Regra de validade mais curta primeiro
-    const validadePendente = estoques.find((item) => {
-      const validadeItem = item.validade?.split("T")[0];
-      return validadeItem < validadeFormatada && item.quantidade > 0;
-    });
-
-    if (validadePendente) {
-      const validadeBloqueada = validadePendente.validade?.split("T")[0].split("-").reverse().join("/");
-      return `Ainda há saldo com validade ${validadeBloqueada}.`;
+    // Verifica se há saldo suficiente somando todas as validades
+    const saldoTotal = estoques.reduce((acc, est) => acc + est.quantidade, 0);
+    if (quantidade > saldoTotal) {
+      return `Quantidade indisponível. Saldo total: ${saldoTotal}`;
     }
 
-    const estoqueSelecionado = estoques.find((item) => {
-      const estoqueValidade = item.validade?.split("T")[0];
-      return estoqueValidade === validadeFormatada;
-    });
-
-    if (!estoqueSelecionado) {
-      return "Estoque não encontrado para essa validade.";
-    }
-
-    if (quantidade > estoqueSelecionado.quantidade) {
-      return `Quantidade indisponível. Estoque atual: ${estoqueSelecionado.quantidade}`;
-    }
-
-    return { produtoInfo, estoqueSelecionado };
+    return { produtoInfo, estoques, validadeFormatada };
   };
 
-  // Registrar saída individual (galpão + loja + histórico)
-  const registrarSaida = async ({ produtoInfo, estoqueSelecionado, quantidade }) => {
-    const validadeFormatada = estoqueSelecionado.validade?.split("T")[0];
-    const validadeDate = new Date(validadeFormatada + "T00:00:00");
+  // Registrar saída FIFO (primeiro validade mais próxima)
+  const registrarSaida = async ({ produtoInfo, estoques, quantidade }) => {
+    let quantidadeRestante = quantidade;
 
-    // Registrar saída no galpão
-    const dadosSaida = {
-      id_produto: produtoInfo.id,
-      id_estoque: estoqueSelecionado.id,
-      ean: produtoInfo.ean,
-      quantidade,
-      validade: validadeDate.toISOString(),
-      data_saida: new Date().toISOString(),
-    };
-    await supabase.from("saida").insert([dadosSaida]);
+    for (const estoque of estoques) {
+      if (quantidadeRestante <= 0) break;
 
-    // Registrar histórico
-    const usuarioEmail = localStorage.getItem("usuarioEmail") || "desconhecido@local";
-    const dadosHistorico = {
-      ...dadosSaida,
-      usuario_email: usuarioEmail,
-    };
-    await supabase.from("saida_historico").insert([dadosHistorico]);
+      const estoqueValidade = estoque.validade?.split("T")[0];
+      const validadeDate = new Date(estoqueValidade + "T00:00:00");
 
-    // Atualizar estoque do galpão
-    const novaQuantidade = estoqueSelecionado.quantidade - quantidade;
-    await supabase.from("estoque").update({ quantidade: novaQuantidade }).eq("id", estoqueSelecionado.id);
+      const quantidadeSaida = Math.min(estoque.quantidade, quantidadeRestante);
 
-    // Atualizar estoque da loja (três cenários)
-    const { data: estoqueLoja } = await supabase
-      .from("estoque_loja")
-      .select("*")
-      .eq("ean", produtoInfo.ean);
+      // Registrar saída no galpão
+      const dadosSaida = {
+        id_produto: produtoInfo.id,
+        id_estoque: estoque.id,
+        ean: produtoInfo.ean,
+        quantidade: quantidadeSaida,
+        validade: validadeDate.toISOString(),
+        data_saida: new Date().toISOString(),
+      };
+      await supabase.from("saida").insert([dadosSaida]);
 
-    if (estoqueLoja && estoqueLoja.length > 0) {
-      const linhaExistente = estoqueLoja.find(item => {
-        const validadeBanco = item.validade?.split("T")[0];
-        return validadeBanco === validadeFormatada;
-      });
+      // Registrar histórico
+      const usuarioEmail = localStorage.getItem("usuarioEmail") || "desconhecido@local";
+      const dadosHistorico = { ...dadosSaida, usuario_email: usuarioEmail };
+      await supabase.from("saida_historico").insert([dadosHistorico]);
+
+      // Atualizar estoque do galpão
+      const novaQuantidade = estoque.quantidade - quantidadeSaida;
+      await supabase.from("estoque").update({ quantidade: novaQuantidade }).eq("id", estoque.id);
+
+      // Atualizar estoque da loja
+      const { data: estoqueLoja } = await supabase
+        .from("estoque_loja")
+        .select("*")
+        .eq("ean", produtoInfo.ean);
+
+      const linhaExistente = estoqueLoja?.find(item => item.validade?.split("T")[0] === estoqueValidade);
 
       if (linhaExistente) {
-        // Caso 1: mesmo EAN e mesma validade → soma quantidade
-        const novaQuantidadeLoja = linhaExistente.quantidade + quantidade;
-        await supabase
-          .from("estoque_loja")
-          .update({ quantidade: novaQuantidadeLoja })
-          .eq("id", linhaExistente.id);
+        const novaQuantidadeLoja = linhaExistente.quantidade + quantidadeSaida;
+        await supabase.from("estoque_loja").update({ quantidade: novaQuantidadeLoja }).eq("id", linhaExistente.id);
       } else {
-        // Caso 2: mesmo EAN mas validade diferente → nova linha
         const novaLinhaLoja = {
           ean: produtoInfo.ean,
           nome: produtoInfo.descricao,
           marca: produtoInfo.marca,
-          validade: validadeFormatada,
-          quantidade
+          validade: estoqueValidade,
+          quantidade: quantidadeSaida,
+          data_entrada: new Date().toISOString()
         };
         await supabase.from("estoque_loja").insert([novaLinhaLoja]);
       }
-    } else {
-      // Caso 3: EAN não existe ainda → nova linha
-      const novaLinhaLoja = {
-        ean: produtoInfo.ean,
-        nome: produtoInfo.descricao,
-        marca: produtoInfo.marca,
-        validade: validadeFormatada,
-        quantidade
-      };
-      await supabase.from("estoque_loja").insert([novaLinhaLoja]);
+
+      quantidadeRestante -= quantidadeSaida;
     }
   };
 
@@ -171,7 +141,7 @@ const SaidaProduto = () => {
       const resultado = await validarSaida({ ean, validade, quantidade });
       await registrarSaida({
         produtoInfo: resultado.produtoInfo,
-        estoqueSelecionado: resultado.estoqueSelecionado,
+        estoques: resultado.estoques,
         quantidade
       });
     }
