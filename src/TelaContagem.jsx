@@ -35,20 +35,19 @@ const TelaContagem = () => {
     
     const parteData = dataString.split("T")[0];
 
-    // Trata datas digitadas com barra ou hífen (ex: 31/12/2026)
     if (parteData.includes("/") || parteData.includes("-")) {
       const separador = parteData.includes("/") ? "/" : "-";
       const partes = parteData.split(separador);
 
       if (partes.length === 3) {
-        // Se foi digitado no padrão brasileiro DD/MM/AAAA
+        // Se foi digitado/selecionado em formato brasileiro DD/MM/AAAA
         if (partes[0].length === 2 && partes[2].length === 4) {
           const dia = partes[0].padStart(2, "0");
           const mes = partes[1].padStart(2, "0");
           const ano = partes[2];
           return `${ano}-${mes}-${dia}`;
         }
-        // Se já vier do banco como YYYY-MM-DD
+        // Se já vier do banco/botão como YYYY-MM-DD
         if (partes[0].length === 4) {
           return `${partes[0]}-${partes[1].padStart(2, "0")}-${partes[2].padStart(2, "0")}`;
         }
@@ -110,22 +109,32 @@ const TelaContagem = () => {
   };
 
   const registrarContagem = async () => {
-    const quantidadeNum = Number(quantidade);
+    // Permite quantidade 0 (converte string vazia para NaN para forçar o alerta)
+    const quantidadeNum = quantidade === "" ? NaN : Number(quantidade);
     const validadeFormatada = formatarDataParaYYYYMMDD(validade);
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const produtoIdValido = uuidRegex.test(produtoId);
 
-    if (
-      !ean?.trim() ||
-      !validadeFormatada ||
-      validadeFormatada.length !== 10 ||
-      !usuarioEmail?.trim() ||
-      !produtoIdValido ||
-      isNaN(quantidadeNum) ||
-      quantidadeNum <= 0
-    ) {
-      alert("Preencha todos os campos corretamente com uma quantidade e validade válida (DD/MM/AAAA) antes de registrar.");
+    // Validações com alertas específicos
+    if (!ean?.trim()) {
+      alert("Por favor, informe ou busque um EAN válido.");
+      return;
+    }
+
+    if (!validadeFormatada || validadeFormatada.length !== 10) {
+      alert("Selecione uma validade existente ou digite no formato correto (DD/MM/AAAA).");
+      return;
+    }
+
+    // ✅ AGORA ACEITA 0 (Bloqueia apenas se estiver vazio ou se for um número negativo)
+    if (isNaN(quantidadeNum) || quantidadeNum < 0) {
+      alert("Digite uma quantidade válida (0 ou superior) antes de registrar.");
+      return;
+    }
+
+    if (!usuarioEmail?.trim() || !produtoIdValido) {
+      alert("Dados do produto ou usuário inválidos. Refaça a busca do produto.");
       return;
     }
 
@@ -164,7 +173,7 @@ const TelaContagem = () => {
         const dadosContagem = {
           ean,
           validade: validadeFormatada,
-          quantidade: quantidadeNum,
+          quantidade: quantidadeNum, // Pode ser 0
           data: new Date().toISOString(),
           usuario_email: usuarioEmail,
           produto_id: produtoId,
@@ -250,8 +259,8 @@ const TelaContagem = () => {
           {descricao && <p><strong>Produto:</strong> {descricao}</p>}
           {marca && <p><strong>Marca:</strong> {marca}</p>}
 
-          {/* Validades Vindas do Estoque */}
-          {validades.length > 1 && !digitarManualmente ? (
+          {/* Botões de Validades Vindas do Estoque */}
+          {validades.length > 0 && !digitarManualmente && (
             <div>
               <p><strong>Escolha a validade:</strong></p>
               {validades.map((val, idx) => (
@@ -262,17 +271,17 @@ const TelaContagem = () => {
                     margin: "0.5rem",
                     padding: "0.5rem 1rem",
                     backgroundColor: val === validade ? "#4CAF50" : "#eee",
+                    color: val === validade ? "#fff" : "#000",
                     border: "1px solid #ccc",
+                    borderRadius: "4px",
                     cursor: "pointer",
                   }}
                 >
-                  {val.split("-").reverse().join("/")}
+                  {val.includes("-") ? val.split("-").reverse().join("/") : val}
                 </button>
               ))}
             </div>
-          ) : validades.length === 1 && !digitarManualmente ? (
-            <p><strong>Validade:</strong> {validade.includes("-") ? validade.split("-").reverse().join("/") : validade}</p>
-          ) : null}
+          )}
 
           {/* Checkbox para Ativar Digitação Manual */}
           <div style={{ marginTop: "1rem" }}>
@@ -306,7 +315,6 @@ const TelaContagem = () => {
                   maxLength={10}
                   value={validade}
                   onChange={(e) => {
-                    // Máscara automática DD/MM/AAAA enquanto o usuário digita
                     let v = e.target.value.replace(/\D/g, "");
                     if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
                     if (v.length > 5) v = v.slice(0, 5) + "/" + v.slice(5, 9);
