@@ -12,8 +12,10 @@ const TelaContagem = () => {
   const [usuarioEmail, setUsuarioEmail] = useState("");
   const [produtoId, setProdutoId] = useState("");
   const [mensagemSucesso, setMensagemSucesso] = useState("");
+  
+  // Controle do checkbox de digitação manual
+  const [digitarManualmente, setDigitarManualmente] = useState(false);
 
-  // ✅ Define o título da aba do navegador
   useEffect(() => {
     document.title = 'Tela de Contagem';
   }, []);
@@ -26,6 +28,35 @@ const TelaContagem = () => {
       console.error("Email do usuário não encontrado no localStorage.");
     }
   }, []);
+
+  // 🔹 Normaliza qualquer formato de data (DD/MM/AAAA ou YYYY-MM-DD) para YYYY-MM-DD do Supabase
+  const formatarDataParaYYYYMMDD = (dataString) => {
+    if (!dataString) return "";
+    
+    const parteData = dataString.split("T")[0];
+
+    // Trata datas digitadas com barra ou hífen (ex: 31/12/2026)
+    if (parteData.includes("/") || parteData.includes("-")) {
+      const separador = parteData.includes("/") ? "/" : "-";
+      const partes = parteData.split(separador);
+
+      if (partes.length === 3) {
+        // Se foi digitado no padrão brasileiro DD/MM/AAAA
+        if (partes[0].length === 2 && partes[2].length === 4) {
+          const dia = partes[0].padStart(2, "0");
+          const mes = partes[1].padStart(2, "0");
+          const ano = partes[2];
+          return `${ano}-${mes}-${dia}`;
+        }
+        // Se já vier do banco como YYYY-MM-DD
+        if (partes[0].length === 4) {
+          return `${partes[0]}-${partes[1].padStart(2, "0")}-${partes[2].padStart(2, "0")}`;
+        }
+      }
+    }
+
+    return parteData;
+  };
 
   const buscarProdutoPorEAN = async () => {
     const eanLimpo = ean.replace(/[^\d]/g, "");
@@ -64,13 +95,14 @@ const TelaContagem = () => {
       const validadesUnicas = Array.from(
         new Set(
           estoques
-            .map((item) => item.validade?.slice(0, 10))
+            .map((item) => formatarDataParaYYYYMMDD(item.validade))
             .filter(Boolean)
         )
       );
 
       setValidades(validadesUnicas);
       setValidade(validadesUnicas.length === 1 ? validadesUnicas[0] : "");
+      setDigitarManualmente(false);
     } catch (err) {
       console.error("Erro ao buscar produto:", err);
       alert("Erro inesperado ao buscar produto.");
@@ -79,7 +111,7 @@ const TelaContagem = () => {
 
   const registrarContagem = async () => {
     const quantidadeNum = Number(quantidade);
-    const validadeFormatada = validade?.slice(0, 10);
+    const validadeFormatada = formatarDataParaYYYYMMDD(validade);
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const produtoIdValido = uuidRegex.test(produtoId);
@@ -87,47 +119,56 @@ const TelaContagem = () => {
     if (
       !ean?.trim() ||
       !validadeFormatada ||
+      validadeFormatada.length !== 10 ||
       !usuarioEmail?.trim() ||
       !produtoIdValido ||
       isNaN(quantidadeNum) ||
-      quantidadeNum < 0
+      quantidadeNum <= 0
     ) {
-      alert("Preencha todos os campos corretamente antes de registrar.");
+      alert("Preencha todos os campos corretamente com uma quantidade e validade válida (DD/MM/AAAA) antes de registrar.");
       return;
     }
 
     try {
+      // 🔍 CONSOLIDAÇÃO: Busca se já existe uma contagem ativa para este EAN + Validade
       const { data: existente, error: erroBusca } = await supabase
         .from("contagens")
         .select("id, quantidade")
         .eq("ean", ean)
         .eq("validade", validadeFormatada)
-        .eq("produto_id", produtoId)
-        .eq("usuario_email", usuarioEmail)
+        .or("ajustado.eq.false,ajustado.is.null")
+        .order("data", { ascending: false })
         .limit(1);
 
       if (erroBusca) throw erroBusca;
 
       if (existente && existente.length > 0) {
+        // ✅ CONSOLIDA (Soma a quantidade digitada)
         const contagemExistente = existente[0];
-        const novaQuantidade = contagemExistente.quantidade + quantidadeNum;
+        const novaQuantidadeTotal = Number(contagemExistente.quantidade || 0) + quantidadeNum;
 
         const { error: erroUpdate } = await supabase
           .from("contagens")
-          .update({ quantidade: novaQuantidade })
+          .update({ 
+            quantidade: novaQuantidadeTotal,
+            data: new Date().toISOString(),
+            usuario_email: usuarioEmail
+          })
           .eq("id", contagemExistente.id);
 
         if (erroUpdate) throw erroUpdate;
 
-        setMensagemSucesso("🔁 Contagem atualizada com sucesso!");
+        setMensagemSucesso(`🔁 Contagem consolidada! Nova quantidade total: ${novaQuantidadeTotal}`);
       } else {
+        // ✅ CRIA NOVA LINHA
         const dadosContagem = {
           ean,
           validade: validadeFormatada,
           quantidade: quantidadeNum,
           data: new Date().toISOString(),
           usuario_email: usuarioEmail,
-          produto_id: produtoId
+          produto_id: produtoId,
+          ajustado: false
         };
 
         const { error: erroInsert } = await supabase
@@ -136,9 +177,10 @@ const TelaContagem = () => {
 
         if (erroInsert) throw erroInsert;
 
-        setMensagemSucesso("✅ Contagem registrada com sucesso!");
+        setMensagemSucesso("✅ Nova contagem registrada com sucesso!");
       }
 
+      // Limpa os campos após registro
       setEan("");
       setDescricao("");
       setMarca("");
@@ -146,10 +188,11 @@ const TelaContagem = () => {
       setQuantidade("");
       setValidades([]);
       setProdutoId("");
+      setDigitarManualmente(false);
 
       setTimeout(() => {
         setMensagemSucesso("");
-      }, 3000);
+      }, 3500);
     } catch (err) {
       console.error("Erro ao registrar contagem:", err);
       alert("Erro ao registrar contagem.");
@@ -170,8 +213,9 @@ const TelaContagem = () => {
           setEan(ean);
           setDescricao(descricao);
           setMarca(marca);
-          setValidade(validade);
-          setValidades(validades);
+          setValidade(formatarDataParaYYYYMMDD(validade) || "");
+          setValidades(validades || []);
+          setDigitarManualmente(false);
         }}
       />
 
@@ -200,13 +244,14 @@ const TelaContagem = () => {
         </button>
       </div>
 
-      {(descricao || marca || validades.length > 0) && (
+      {(descricao || marca || validades.length > 0 || produtoId) && (
         <div style={{ marginTop: "1rem" }}>
           <p><strong>EAN:</strong> {ean}</p>
           {descricao && <p><strong>Produto:</strong> {descricao}</p>}
           {marca && <p><strong>Marca:</strong> {marca}</p>}
 
-          {validades.length > 1 ? (
+          {/* Validades Vindas do Estoque */}
+          {validades.length > 1 && !digitarManualmente ? (
             <div>
               <p><strong>Escolha a validade:</strong></p>
               {validades.map((val, idx) => (
@@ -225,9 +270,60 @@ const TelaContagem = () => {
                 </button>
               ))}
             </div>
-          ) : validades.length === 1 ? (
-            <p><strong>Validade:</strong> {validades[0].split("-").reverse().join("/")}</p>
+          ) : validades.length === 1 && !digitarManualmente ? (
+            <p><strong>Validade:</strong> {validade.includes("-") ? validade.split("-").reverse().join("/") : validade}</p>
           ) : null}
+
+          {/* Checkbox para Ativar Digitação Manual */}
+          <div style={{ marginTop: "1rem" }}>
+            <label style={{ cursor: "pointer", display: "inline-flex", alignItems: "center" }}>
+              <input
+                type="checkbox"
+                checked={digitarManualmente}
+                onChange={(e) => {
+                  setDigitarManualmente(e.target.checked);
+                  if (!e.target.checked) {
+                    setValidade(validades.length === 1 ? validades[0] : "");
+                  } else {
+                    setValidade("");
+                  }
+                }}
+                style={{ marginRight: "0.5rem" }}
+              />
+              <strong>Digitar validade manualmente</strong>
+            </label>
+          </div>
+
+          {/* Campo de Texto com Máscara Brasileira DD/MM/AAAA */}
+          {digitarManualmente && (
+            <div style={{ marginTop: "0.5rem" }}>
+              <label>
+                <strong>Digite a validade (DD/MM/AAAA):</strong>
+                <br />
+                <input
+                  type="text"
+                  placeholder="Ex: 31/12/2026"
+                  maxLength={10}
+                  value={validade}
+                  onChange={(e) => {
+                    // Máscara automática DD/MM/AAAA enquanto o usuário digita
+                    let v = e.target.value.replace(/\D/g, "");
+                    if (v.length > 2) v = v.slice(0, 2) + "/" + v.slice(2);
+                    if (v.length > 5) v = v.slice(0, 5) + "/" + v.slice(5, 9);
+                    setValidade(v);
+                  }}
+                  style={{
+                    marginTop: "0.25rem",
+                    padding: "0.4rem",
+                    width: "100%",
+                    maxWidth: "300px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc"
+                  }}
+                />
+              </label>
+            </div>
+          )}
         </div>
       )}
 
