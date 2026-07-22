@@ -16,6 +16,16 @@ const TelaContagem = () => {
   // Controle do checkbox de digitação manual
   const [digitarManualmente, setDigitarManualmente] = useState(false);
 
+  // Estilo padrão garantido para inputs (evita fundo escuro no Dark Mode do celular)
+  const estiloInputBase = {
+    backgroundColor: "#ffffff",
+    color: "#000000",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    padding: "0.5rem",
+    fontSize: "1rem"
+  };
+
   useEffect(() => {
     document.title = 'Tela de Contagem';
   }, []);
@@ -40,14 +50,12 @@ const TelaContagem = () => {
       const partes = parteData.split(separador);
 
       if (partes.length === 3) {
-        // Se foi digitado/selecionado em formato brasileiro DD/MM/AAAA
         if (partes[0].length === 2 && partes[2].length === 4) {
           const dia = partes[0].padStart(2, "0");
           const mes = partes[1].padStart(2, "0");
           const ano = partes[2];
           return `${ano}-${mes}-${dia}`;
         }
-        // Se já vier do banco/botão como YYYY-MM-DD
         if (partes[0].length === 4) {
           return `${partes[0]}-${partes[1].padStart(2, "0")}-${partes[2].padStart(2, "0")}`;
         }
@@ -109,14 +117,12 @@ const TelaContagem = () => {
   };
 
   const registrarContagem = async () => {
-    // Permite quantidade 0 (converte string vazia para NaN para forçar o alerta)
     const quantidadeNum = quantidade === "" ? NaN : Number(quantidade);
     const validadeFormatada = formatarDataParaYYYYMMDD(validade);
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const produtoIdValido = uuidRegex.test(produtoId);
 
-    // Validações com alertas específicos
     if (!ean?.trim()) {
       alert("Por favor, informe ou busque um EAN válido.");
       return;
@@ -127,7 +133,6 @@ const TelaContagem = () => {
       return;
     }
 
-    // ✅ AGORA ACEITA 0 (Bloqueia apenas se estiver vazio ou se for um número negativo)
     if (isNaN(quantidadeNum) || quantidadeNum < 0) {
       alert("Digite uma quantidade válida (0 ou superior) antes de registrar.");
       return;
@@ -139,7 +144,6 @@ const TelaContagem = () => {
     }
 
     try {
-      // 🔍 CONSOLIDAÇÃO: Busca se já existe uma contagem ativa para este EAN + Validade
       const { data: existente, error: erroBusca } = await supabase
         .from("contagens")
         .select("id, quantidade")
@@ -152,7 +156,6 @@ const TelaContagem = () => {
       if (erroBusca) throw erroBusca;
 
       if (existente && existente.length > 0) {
-        // ✅ CONSOLIDA (Soma a quantidade digitada)
         const contagemExistente = existente[0];
         const novaQuantidadeTotal = Number(contagemExistente.quantidade || 0) + quantidadeNum;
 
@@ -169,11 +172,10 @@ const TelaContagem = () => {
 
         setMensagemSucesso(`🔁 Contagem consolidada! Nova quantidade total: ${novaQuantidadeTotal}`);
       } else {
-        // ✅ CRIA NOVA LINHA
         const dadosContagem = {
           ean,
           validade: validadeFormatada,
-          quantidade: quantidadeNum, // Pode ser 0
+          quantidade: quantidadeNum,
           data: new Date().toISOString(),
           usuario_email: usuarioEmail,
           produto_id: produtoId,
@@ -189,7 +191,6 @@ const TelaContagem = () => {
         setMensagemSucesso("✅ Nova contagem registrada com sucesso!");
       }
 
-      // Limpa os campos após registro
       setEan("");
       setDescricao("");
       setMarca("");
@@ -209,7 +210,7 @@ const TelaContagem = () => {
   };
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "600px", margin: "auto" }}>
+    <div style={{ padding: "1.5rem", maxWidth: "600px", margin: "auto", color: "#000" }}>
       <h2>📦 Contagem de Estoque</h2>
 
       {usuarioEmail && (
@@ -229,28 +230,32 @@ const TelaContagem = () => {
       />
 
       <div style={{ marginTop: "1rem", marginBottom: "1rem" }}>
-        <label>
+        <label style={{ display: "block", marginBottom: "0.5rem" }}>
           <strong>EAN manual:</strong>
+        </label>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
           <input
             type="text"
             value={ean}
             onChange={(e) => setEan(e.target.value)}
-            style={{ marginLeft: "1rem", width: "200px" }}
+            style={{ ...estiloInputBase, flex: 1 }}
+            placeholder="Digite o EAN..."
           />
-        </label>
-        <button
-          onClick={buscarProdutoPorEAN}
-          style={{
-            marginLeft: "1rem",
-            padding: "0.5rem 1rem",
-            backgroundColor: "#007BFF",
-            color: "#fff",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          🔍 Buscar Produto
-        </button>
+          <button
+            onClick={buscarProdutoPorEAN}
+            style={{
+              padding: "0.5rem 1rem",
+              backgroundColor: "#007BFF",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "bold"
+            }}
+          >
+            🔍 Buscar
+          </button>
+        </div>
       </div>
 
       {(descricao || marca || validades.length > 0 || produtoId) && (
@@ -261,20 +266,21 @@ const TelaContagem = () => {
 
           {/* Botões de Validades Vindas do Estoque */}
           {validades.length > 0 && !digitarManualmente && (
-            <div>
+            <div style={{ marginTop: "0.5rem" }}>
               <p><strong>Escolha a validade:</strong></p>
               {validades.map((val, idx) => (
                 <button
                   key={idx}
                   onClick={() => setValidade(val)}
                   style={{
-                    margin: "0.5rem",
+                    margin: "0.25rem",
                     padding: "0.5rem 1rem",
-                    backgroundColor: val === validade ? "#4CAF50" : "#eee",
+                    backgroundColor: val === validade ? "#4CAF50" : "#f0f0f0",
                     color: val === validade ? "#fff" : "#000",
                     border: "1px solid #ccc",
                     borderRadius: "4px",
                     cursor: "pointer",
+                    fontWeight: val === validade ? "bold" : "normal"
                   }}
                 >
                   {val.includes("-") ? val.split("-").reverse().join("/") : val}
@@ -297,7 +303,7 @@ const TelaContagem = () => {
                     setValidade("");
                   }
                 }}
-                style={{ marginRight: "0.5rem" }}
+                style={{ marginRight: "0.5rem", width: "18px", height: "18px" }}
               />
               <strong>Digitar validade manualmente</strong>
             </label>
@@ -321,12 +327,10 @@ const TelaContagem = () => {
                     setValidade(v);
                   }}
                   style={{
+                    ...estiloInputBase,
                     marginTop: "0.25rem",
-                    padding: "0.4rem",
                     width: "100%",
-                    maxWidth: "300px",
-                    borderRadius: "4px",
-                    border: "1px solid #ccc"
+                    maxWidth: "300px"
                   }}
                 />
               </label>
@@ -335,26 +339,31 @@ const TelaContagem = () => {
         </div>
       )}
 
-      <div style={{ marginTop: "2rem" }}>
-        <label>
+      <div style={{ marginTop: "1.5rem" }}>
+        <label style={{ display: "block", marginBottom: "0.25rem" }}>
           <strong>Quantidade:</strong>
-          <input
-            type="number"
-            value={quantidade}
-            onChange={(e) => setQuantidade(e.target.value)}
-            style={{ marginLeft: "1rem", width: "100px" }}
-          />
         </label>
+        <input
+          type="number"
+          value={quantidade}
+          onChange={(e) => setQuantidade(e.target.value)}
+          style={{ ...estiloInputBase, width: "100%", maxWidth: "150px" }}
+          placeholder="0"
+        />
       </div>
 
       <button
         onClick={registrarContagem}
         style={{
-          marginTop: "1rem",
-          padding: "0.5rem 1rem",
+          marginTop: "1.5rem",
+          padding: "0.75rem 1.5rem",
           backgroundColor: "#4CAF50",
           color: "#fff",
           border: "none",
+          borderRadius: "4px",
+          width: "100%",
+          fontSize: "1.1rem",
+          fontWeight: "bold",
           cursor: "pointer",
         }}
       >
@@ -362,7 +371,7 @@ const TelaContagem = () => {
       </button>
 
       {mensagemSucesso && (
-        <p style={{ marginTop: "1rem", color: "#4CAF50", fontWeight: "bold" }}>
+        <p style={{ marginTop: "1rem", color: "#4CAF50", fontWeight: "bold", textAlign: "center" }}>
           {mensagemSucesso}
         </p>
       )}
