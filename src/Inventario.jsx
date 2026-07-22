@@ -82,51 +82,93 @@ const Inventario = () => {
   };
 
   const ajustarEstoque = async (produto) => {
-    const { data: ultimaContagem, error: erroContagem } = await supabase
-      .from('contagens')
-      .select('quantidade')
-      .eq('ean', produto.ean)
-      .eq('validade', produto.validade)
-      .or('ajustado.eq.false,ajustado.is.null')
-      .order('data', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      // 1. Garante que a validade está limpa no formato YYYY-MM-DD
+      const validadeLimpa = produto.validade ? produto.validade.slice(0, 10) : null;
 
-    if (erroContagem || !ultimaContagem) {
-      alert('Erro ao buscar última contagem');
-      console.error(erroContagem);
-      return;
+      if (!validadeLimpa) {
+        alert("Validade inválida para ajuste.");
+        return;
+      }
+
+      // 2. Busca a última contagem ativa para este EAN + Validade
+      const { data: ultimaContagem, error: erroContagem } = await supabase
+        .from('contagens')
+        .select('quantidade')
+        .eq('ean', produto.ean)
+        .eq('validade', validadeLimpa)
+        .or('ajustado.eq.false,ajustado.is.null')
+        .order('data', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (erroContagem || !ultimaContagem) {
+        alert('Erro ao buscar última contagem');
+        console.error("Erro contagem:", erroContagem);
+        return;
+      }
+
+      // 3. Checa se a linha já existe na tabela de estoque
+      const { data: itemEstoque, error: erroChecagem } = await supabase
+        .from('estoque')
+        .select('id')
+        .eq('ean', produto.ean)
+        .eq('validade', validadeLimpa)
+        .maybeSingle();
+
+      if (erroChecagem) {
+        console.error("Erro ao checar estoque existente:", erroChecagem);
+      }
+
+      let erroEstoque = null;
+
+      if (itemEstoque) {
+        // Se já existe no estoque, atualiza a quantidade
+        const { error } = await supabase
+          .from('estoque')
+          .update({ quantidade: ultimaContagem.quantidade })
+          .eq('ean', produto.ean)
+          .eq('validade', validadeLimpa);
+        erroEstoque = error;
+      } else {
+        // Se for uma validade nova (inserida manualmente), cria o registro
+        const { error } = await supabase
+          .from('estoque')
+          .insert([{
+            ean: produto.ean,
+            validade: validadeLimpa,
+            quantidade: ultimaContagem.quantidade
+          }]);
+        erroEstoque = error;
+      }
+
+      if (erroEstoque) {
+        alert('Erro ao ajustar estoque.');
+        console.error("Erro ao salvar no estoque:", erroEstoque);
+        return;
+      }
+
+      // 4. Marca as contagens correspondentes como ajustadas
+      const { error: erroAtualizarContagens } = await supabase
+        .from('contagens')
+        .update({ ajustado: true })
+        .eq('ean', produto.ean)
+        .eq('validade', validadeLimpa);
+
+      if (erroAtualizarContagens) {
+        alert('Erro ao marcar contagens como ajustadas');
+        console.error("Erro ao atualizar contagens:", erroAtualizarContagens);
+        return;
+      }
+
+      alert('✅ Estoque ajustado com sucesso!');
+      carregarInventario();
+      setProdutoSelecionado(null);
+      setHistorico([]);
+    } catch (err) {
+      console.error("Erro inesperado no ajuste:", err);
+      alert("Erro inesperado ao ajustar estoque.");
     }
-
-    // Atualiza ou insere o saldo no estoque
-    const { error: erroEstoque } = await supabase
-      .from('estoque')
-      .upsert(
-        { ean: produto.ean, validade: produto.validade, quantidade: ultimaContagem.quantidade },
-        { onConflict: 'ean,validade' }
-      );
-
-    if (erroEstoque) {
-      alert('Erro ao ajustar estoque');
-      console.error(erroEstoque);
-      return;
-    }
-
-    const { error: erroAtualizarContagens } = await supabase
-      .from('contagens')
-      .update({ ajustado: true })
-      .match({ ean: produto.ean, validade: produto.validade });
-
-    if (erroAtualizarContagens) {
-      alert('Erro ao marcar contagens como ajustadas');
-      console.error(erroAtualizarContagens);
-      return;
-    }
-
-    alert('✅ Estoque ajustado e item removido da tela!');
-    carregarInventario();
-    setProdutoSelecionado(null);
-    setHistorico([]);
   };
 
   const carregarHistorico = async (ean, validade) => {
