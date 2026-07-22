@@ -1,48 +1,20 @@
-import { useEffect, useState } from "react";
-import { supabase } from "./supabaseClient";
+import React, { useEffect, useState } from 'react';
+import { supabase } from './supabaseClient';
 
 const Inventario = () => {
-  const [contagens, setContagens] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [produtos, setProdutos] = useState([]);
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
+  const [historico, setHistorico] = useState([]);
 
   useEffect(() => {
-    document.title = "Ajuste de Inventário";
-    carregarContagensPendentes();
+    document.title = 'Inventário';
   }, []);
 
-  // 🔹 Busca contagens pendentes (ajustado = false ou null)
-  const carregarContagensPendentes = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("contagens")
-        .select(`
-          id,
-          ean,
-          validade,
-          quantidade,
-          data,
-          usuario_email,
-          produto_id,
-          produto:produto_id ( descricao, marca )
-        `)
-        .or("ajustado.eq.false,ajustado.is.null")
-        .order("data", { ascending: false });
-
-      if (error) throw error;
-      setContagens(data || []);
-    } catch (err) {
-      console.error("Erro ao carregar contagens:", err);
-      alert("Erro ao carregar contagens pendentes.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 🔹 Função para formatar data para YYYY-MM-DD
+  // 🔹 Normaliza qualquer data para YYYY-MM-DD
   const formatarDataParaYYYYMMDD = (dataString) => {
-    if (!dataString) return "";
+    if (!dataString) return null;
     const parteData = dataString.split("T")[0];
+
     if (parteData.includes("/")) {
       const partes = parteData.split("/");
       if (partes.length === 3) {
@@ -57,123 +29,365 @@ const Inventario = () => {
     return parteData;
   };
 
-  // 🔹 Função principal: Ajustar Estoque
-  const ajustarEstoqueItem = async (contagem) => {
-    const confirmacao = window.confirm(
-      `Deseja ajustar o estoque do EAN ${contagem.ean} (Validade: ${contagem.validade}) para a quantidade ${contagem.quantidade}?`
+  const carregarInventario = async () => {
+    // 1️⃣ Busca todas as contagens registradas
+    const { data: contagens, error: erroContagem } = await supabase
+      .from('contagens')
+      .select(`
+        ean,
+        validade,
+        quantidade,
+        ajustado,
+        data,
+        produto_id,
+        produto:produto_id (
+          descricao,
+          marca
+        )
+      `)
+      .order('data', { ascending: false });
+
+    if (erroContagem) {
+      console.error("Erro ao buscar contagens:", erroContagem);
+      return;
+    }
+
+    // 2️⃣ Agrupa para pegar apenas a última contagem de cada EAN + Validade
+    const agrupados = {};
+    for (const item of contagens) {
+      const chave = `${item.ean}_${item.validade}`;
+      if (!agrupados[chave]) agrupados[chave] = item;
+    }
+
+    // 3️⃣ Filtra para exibir apenas as contagens pendentes de ajuste
+    const ultimasNaoAjustadas = Object.values(agrupados).filter(
+      item => item.ajustado === false || item.ajustado === null || item.ajustado === undefined
     );
 
-    if (!confirmacao) return;
+    // 4️⃣ Busca o saldo atual no ESTOQUE para cada item (EAN + Validade) e calcula o Status
+    const produtosComSaldo = await Promise.all(
+      ultimasNaoAjustadas.map(async (item) => {
+        const validadeLimpa = formatarDataParaYYYYMMDD(item.validade);
 
+        // Busca o saldo atual cadastrado na tabela 'estoque'
+        const { data: estoque, error: erroEstoque } = await supabase
+          .from('estoque')
+          .select('quantidade')
+          .eq('ean', item.ean)
+          .eq('validade', validadeLimpa)
+          .limit(1)
+          .maybeSingle();
+
+        if (erroEstoque) {
+          console.error(`Erro ao buscar saldo no estoque para EAN ${item.ean}:`, erroEstoque);
+        }
+
+        const saldo = estoque?.quantidade ?? null;
+
+        // Regra do Status:
+        // - Pendente: se o saldo no estoque não existir (novo item) ou contagem nula
+        // - OK: se a quantidade contada for igual ao saldo atual do estoque
+        // - Divergente: se a quantidade contada for diferente do saldo atual do estoque
+        const status =
+          item.quantidade == null || saldo == null
+            ? 'Pendente'
+            : item.quantidade === saldo
+            ? 'OK'
+            : 'Divergente';
+
+        return {
+          ean: item.ean,
+          descricao: item.produto?.descricao ?? '—',
+          marca: item.produto?.marca ?? '—',
+          validade: item.validade,
+          quantidade: item.quantidade, // Quantidade contada no inventário
+          saldo,                        // Saldo atual no banco (tabela 'estoque')
+          status,                       // OK, Divergente ou Pendente
+          produto_id: item.produto_id
+        };
+      })
+    );
+
+    setProdutos(produtosComSaldo);
+  };
+
+  const ajustarEstoque = async (produto) => {
     try {
-      const validadeFormatada = formatarDataParaYYYYMMDD(contagem.validade);
-      const quantidadeContada = Number(contagem.quantidade);
+      const validadeLimpa = formatarDataParaYYYYMMDD(produto.validade);
 
-      // 1️⃣ Verifica se já existe o registro desse EAN + Validade na tabela estoque
-      const { data: estoqueExistente, error: erroEstoque } = await supabase
-        .from("estoque")
-        .select("id, quantidade")
-        .eq("ean", contagem.ean)
-        .eq("validade", validadeFormatada)
-        .limit(1);
-
-      if (erroEstoque) throw erroEstoque;
-
-      if (estoqueExistente && estoqueExistente.length > 0) {
-        // 2️⃣ SE JÁ EXISTE: SUBSTITUI a quantidade pela quantidade contada
-        const itemEstoque = estoqueExistente[0];
-
-        const { error: erroUpdate } = await supabase
-          .from("estoque")
-          .update({ quantidade: quantidadeContada })
-          .eq("id", itemEstoque.id);
-
-        if (erroUpdate) throw erroUpdate;
-      } else {
-        // 3️⃣ SE NÃO EXISTE: INSERE uma nova linha na tabela estoque
-        const { error: erroInsert } = await supabase
-          .from("estoque")
-          .insert([
-            {
-              ean: contagem.ean,
-              validade: validadeFormatada,
-              quantidade: quantidadeContada,
-              produto_id: contagem.produto_id
-            }
-          ]);
-
-        if (erroInsert) throw erroInsert;
+      if (!validadeLimpa) {
+        alert("Validade inválida para ajuste.");
+        return;
       }
 
-      // 4️⃣ MARCA A CONTAGEM COMO AJUSTADA
-      const { error: erroAjustarContagem } = await supabase
-        .from("contagens")
+      // 1️⃣ Busca o ID REAL do produto direto da tabela 'produto' pelo EAN
+      const { data: dadosProduto, error: erroProduto } = await supabase
+        .from('produto')
+        .select('id_produto')
+        .eq('ean', produto.ean)
+        .limit(1)
+        .maybeSingle();
+
+      if (erroProduto || !dadosProduto) {
+        alert("Produto não encontrado na tabela cadastral 'produto'.");
+        console.error("Erro ao buscar id_produto:", erroProduto);
+        return;
+      }
+
+      const idProdutoReal = dadosProduto.id_produto;
+
+      // 2️⃣ Busca a quantidade da última contagem não ajustada
+      const { data: ultimaContagem, error: erroContagem } = await supabase
+        .from('contagens')
+        .select('quantidade')
+        .eq('ean', produto.ean)
+        .eq('validade', validadeLimpa)
+        .or('ajustado.eq.false,ajustado.is.null')
+        .order('data', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (erroContagem || !ultimaContagem) {
+        alert('Erro ao buscar última contagem pendente.');
+        console.error("Erro busca contagem:", erroContagem);
+        return;
+      }
+
+      // 3️⃣ Checa se o item já existe na tabela estoque (EAN + Validade)
+      const { data: itemEstoque, error: erroChecagem } = await supabase
+        .from('estoque')
+        .select('id')
+        .eq('ean', produto.ean)
+        .eq('validade', validadeLimpa)
+        .maybeSingle();
+
+      if (erroChecagem) {
+        console.error("Erro ao checar estoque existente:", erroChecagem);
+      }
+
+      let erroEstoque = null;
+
+      if (itemEstoque) {
+        // 4️⃣ UPDATE se já existe no estoque
+        const { error } = await supabase
+          .from('estoque')
+          .update({ 
+            quantidade: ultimaContagem.quantidade,
+            produto_id: idProdutoReal 
+          })
+          .eq('id', itemEstoque.id);
+
+        erroEstoque = error;
+      } else {
+        // 5️⃣ INSERT se não existe no estoque
+        const { error } = await supabase
+          .from('estoque')
+          .insert([{
+            ean: produto.ean,
+            validade: validadeLimpa,
+            quantidade: ultimaContagem.quantidade,
+            produto_id: idProdutoReal
+          }]);
+
+        erroEstoque = error;
+      }
+
+      if (erroEstoque) {
+        alert('Erro ao salvar ajuste no estoque. Verifique o console.');
+        console.error("Erro no ajuste do estoque:", erroEstoque);
+        return;
+      }
+
+      // 6️⃣ Marca as contagens como ajustadas
+      const { error: erroAtualizarContagens } = await supabase
+        .from('contagens')
         .update({ ajustado: true })
-        .eq("id", contagem.id);
+        .eq('ean', produto.ean)
+        .eq('validade', validadeLimpa);
 
-      if (erroAjustarContagem) throw erroAjustarContagem;
+      if (erroAtualizarContagens) {
+        alert('Erro ao marcar contagens como ajustadas');
+        console.error("Erro ao marcar contagens:", erroAtualizarContagens);
+        return;
+      }
 
-      alert("✅ Estoque ajustado com sucesso!");
-      
-      // Recarrega a lista removendo a contagem ajustada
-      carregarContagensPendentes();
+      alert('✅ Estoque ajustado com sucesso!');
+      carregarInventario();
+      setProdutoSelecionado(null);
+      setHistorico([]);
     } catch (err) {
-      console.error("Erro ao ajustar estoque:", err);
-      alert("Erro ao realizar o ajuste de estoque.");
+      console.error("Erro inesperado no ajuste:", err);
+      alert("Erro inesperado ao ajustar estoque.");
     }
   };
 
-  return (
-    <div style={{ padding: "2rem", maxWidth: "900px", margin: "auto" }}>
-      <h2>📋 Ajuste de Inventário</h2>
+  const carregarHistorico = async (ean, validade) => {
+    const validadeLimpa = formatarDataParaYYYYMMDD(validade);
 
-      {loading ? (
-        <p>Carregando contagens pendentes...</p>
-      ) : contagens.length === 0 ? (
-        <p>Nenhuma contagem pendente de ajuste.</p>
-      ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "1rem" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#f2f2f2", textAlign: "left" }}>
-              <th style={{ padding: "8px", border: "1px solid #ddd" }}>EAN</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd" }}>Produto</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd" }}>Validade</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd" }}>Qtd Contada</th>
-              <th style={{ padding: "8px", border: "1px solid #ddd" }}>Ações</th>
+    const { data, error } = await supabase
+      .from('contagens')
+      .select('*')
+      .eq('ean', ean)
+      .eq('validade', validadeLimpa)
+      .order('data', { ascending: false });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setProdutoSelecionado({ ean, validade });
+      setHistorico(data || []);
+    }
+  };
+
+  useEffect(() => {
+    carregarInventario();
+
+    const canal = supabase
+      .channel('inventario-tempo-real')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'contagens'
+      }, payload => {
+        console.log('Atualização recebida:', payload);
+        carregarInventario();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, []);
+
+  return (
+    <div style={{ padding: '2rem' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>📦 Tela de Inventário</h1>
+
+      <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead style={{ backgroundColor: '#f0f0f0' }}>
+          <tr>
+            <th>EAN</th>
+            <th>Descrição</th>
+            <th>Marca</th>
+            <th>Validade</th>
+            <th>Contagem</th>
+            <th>Saldo Estoque</th>
+            <th>Status</th>
+            <th>Ajustar</th>
+            <th>Histórico</th>
+          </tr>
+        </thead>
+        <tbody>
+          {produtos.map((p, index) => (
+            <tr key={index}>
+              <td>{p.ean}</td>
+              <td>{p.descricao}</td>
+              <td>{p.marca}</td>
+              <td>{p.validade ? p.validade.split("-").reverse().join("/") : '—'}</td>
+              <td><strong>{p.quantidade ?? '—'}</strong></td>
+              <td>{p.saldo ?? 'Sem Saldo'}</td>
+              <td>
+                {p.status === 'OK' && <span title="Contagem igual ao saldo">✅</span>}
+                {p.status === 'Divergente' && <span title="Contagem diferente do saldo">⚠️</span>}
+                {p.status === 'Pendente' && <span title="Sem registro prévio no estoque">⏳</span>}
+                <span style={{ marginLeft: '0.5rem' }}>{p.status}</span>
+              </td>
+              <td>
+                <button
+                  style={{
+                    backgroundColor: '#28a745',
+                    color: '#fff',
+                    padding: '0.3rem 0.6rem',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => ajustarEstoque(p)}
+                >
+                  Ajustar Estoque
+                </button>
+              </td>
+              <td>
+                <button
+                  style={{
+                    backgroundColor: '#6c757d',
+                    color: '#fff',
+                    padding: '0.3rem 0.6rem',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => carregarHistorico(p.ean, p.validade)}
+                >
+                  Ver Histórico
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {contagens.map((item) => (
-              <tr key={item.id}>
-                <td style={{ padding: "8px", border: "1px solid #ddd" }}>{item.ean}</td>
-                <td style={{ padding: "8px", border: "1px solid #ddd" }}>
-                  {item.produto?.descricao || "N/A"}
-                </td>
-                <td style={{ padding: "8px", border: "1px solid #ddd" }}>
-                  {item.validade ? item.validade.split("-").reverse().join("/") : "Sem data"}
-                </td>
-                <td style={{ padding: "8px", border: "1px solid #ddd", fontWeight: "bold" }}>
-                  {item.quantidade}
-                </td>
-                <td style={{ padding: "8px", border: "1px solid #ddd" }}>
-                  <button
-                    onClick={() => ajustarEstoqueItem(item)}
-                    style={{
-                      padding: "0.4rem 0.8rem",
-                      backgroundColor: "#28a745",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer"
-                    }}
-                  >
-                    ⚙️ Ajustar Estoque
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </tbody>
+      </table>
+
+      {produtoSelecionado && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '2rem',
+            borderRadius: '8px',
+            boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+            width: '100%',
+            maxWidth: '800px'
+          }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>📋 Histórico de Contagens</h2>
+            <p><strong>EAN:</strong> {produtoSelecionado.ean}</p>
+            <p><strong>Validade:</strong> {produtoSelecionado.validade ? produtoSelecionado.validade.split("-").reverse().join("/") : '—'}</p>
+
+            <table border="1" cellPadding="8" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+              <thead style={{ backgroundColor: '#f0f0f0' }}>
+                <tr>
+                  <th>Contagem Nº</th>
+                  <th>Quantidade</th>
+                  <th>Usuário</th>
+                  <th>Data</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historico.map((item, index) => (
+                  <tr key={index}>
+                    <td>{item.contagem_num ?? index + 1}</td>
+                    <td>{item.quantidade}</td>
+                    <td>{item.usuario_email ?? item.usuario ?? '—'}</td>
+                    <td>{item.data ? new Date(item.data).toLocaleString('pt-BR') : '—'}</td>
+                    <td>{item.status ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <button
+              style={{
+                marginTop: '1.5rem',
+                backgroundColor: '#dc3545',
+                color: '#fff',
+                padding: '0.5rem 1rem',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+              onClick={() => setProdutoSelecionado(null)}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
