@@ -6,7 +6,7 @@ const Inventario = () => {
   const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [historico, setHistorico] = useState([]);
 
-  // ✅ Define o título da aba do navegador (NOVA LINHA PEDIDA)
+  // ✅ Define o título da aba do navegador
   useEffect(() => {
     document.title = 'Inventário';
   }, []);
@@ -38,17 +38,25 @@ const Inventario = () => {
       if (!agrupados[chave]) agrupados[chave] = item;
     }
 
-    const ultimasNaoAjustadas = Object.values(agrupados).filter(item => item.ajustado === false);
+    // ✅ Tratamento ajustado: considera itens que não foram ajustados (false ou null/undefined)
+    const ultimasNaoAjustadas = Object.values(agrupados).filter(
+      item => item.ajustado === false || item.ajustado === null || item.ajustado === undefined
+    );
 
     const produtosComSaldo = await Promise.all(
       ultimasNaoAjustadas.map(async (item) => {
+        // ✅ Corrigido: Uso do .maybeSingle() para NÃO estourar erro caso o estoque seja 0 ou não exista
         const { data: estoque, error: erroEstoque } = await supabase
           .from('estoque')
           .select('quantidade')
           .eq('ean', item.ean)
           .eq('validade', item.validade)
           .limit(1)
-          .single();
+          .maybeSingle();
+
+        if (erroEstoque) {
+          console.error(`Erro ao buscar estoque para o EAN ${item.ean}:`, erroEstoque);
+        }
 
         const saldo = estoque?.quantidade ?? null;
         const status =
@@ -79,10 +87,10 @@ const Inventario = () => {
       .select('quantidade')
       .eq('ean', produto.ean)
       .eq('validade', produto.validade)
-      .eq('ajustado', false)
+      .or('ajustado.eq.false,ajustado.is.null')
       .order('data', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (erroContagem || !ultimaContagem) {
       alert('Erro ao buscar última contagem');
@@ -90,10 +98,13 @@ const Inventario = () => {
       return;
     }
 
+    // Atualiza ou insere o saldo no estoque
     const { error: erroEstoque } = await supabase
       .from('estoque')
-      .update({ quantidade: ultimaContagem.quantidade })
-      .match({ ean: produto.ean, validade: produto.validade });
+      .upsert(
+        { ean: produto.ean, validade: produto.validade, quantidade: ultimaContagem.quantidade },
+        { onConflict: 'ean,validade' }
+      );
 
     if (erroEstoque) {
       alert('Erro ao ajustar estoque');
@@ -124,13 +135,13 @@ const Inventario = () => {
       .select('*')
       .eq('ean', ean)
       .eq('validade', validade)
-      .order('contagem_num', { ascending: true });
+      .order('data', { ascending: false });
 
     if (error) {
       console.error(error);
     } else {
       setProdutoSelecionado({ ean, validade });
-      setHistorico(data);
+      setHistorico(data || []);
     }
   };
 
@@ -257,10 +268,10 @@ const Inventario = () => {
               <tbody>
                 {historico.map((item, index) => (
                   <tr key={index}>
-                    <td>{item.contagem_num}</td>
+                    <td>{item.contagem_num ?? index + 1}</td>
                     <td>{item.quantidade}</td>
-                    <td>{item.usuario ?? '—'}</td>
-                    <td>{item.data}</td>
+                    <td>{item.usuario_email ?? item.usuario ?? '—'}</td>
+                    <td>{item.data ? new Date(item.data).toLocaleString('pt-BR') : '—'}</td>
                     <td>{item.status ?? '—'}</td>
                   </tr>
                 ))}
