@@ -10,7 +10,7 @@ const Inventario = () => {
     document.title = 'Inventário';
   }, []);
 
-  // 🔹 Normaliza qualquer data para YYYY-MM-DD
+  // 🔹 Normaliza qualquer data para YYYY-MM-DD (formato aceito pela coluna 'date' do Postgres)
   const formatarDataParaYYYYMMDD = (dataString) => {
     if (!dataString) return null;
     const parteData = dataString.split("T")[0];
@@ -69,7 +69,6 @@ const Inventario = () => {
       ultimasNaoAjustadas.map(async (item) => {
         const validadeLimpa = formatarDataParaYYYYMMDD(item.validade);
 
-        // Busca o saldo atual cadastrado na tabela 'estoque'
         const { data: estoque, error: erroEstoque } = await supabase
           .from('estoque')
           .select('quantidade')
@@ -84,10 +83,6 @@ const Inventario = () => {
 
         const saldo = estoque?.quantidade ?? null;
 
-        // Regra do Status:
-        // - Pendente: se o saldo no estoque não existir (novo item) ou contagem nula
-        // - OK: se a quantidade contada for igual ao saldo atual do estoque
-        // - Divergente: se a quantidade contada for diferente do saldo atual do estoque
         const status =
           item.quantidade == null || saldo == null
             ? 'Pendente'
@@ -100,9 +95,9 @@ const Inventario = () => {
           descricao: item.produto?.descricao ?? '—',
           marca: item.produto?.marca ?? '—',
           validade: item.validade,
-          quantidade: item.quantidade, // Quantidade contada no inventário
-          saldo,                        // Saldo atual no banco (tabela 'estoque')
-          status,                       // OK, Divergente ou Pendente
+          quantidade: item.quantidade,
+          saldo,
+          status,
           produto_id: item.produto_id
         };
       })
@@ -120,17 +115,17 @@ const Inventario = () => {
         return;
       }
 
-      // 1️⃣ Busca o ID REAL do produto direto da tabela 'produto' pelo EAN
+      // 1️⃣ Busca o ID e dados cadastrais direto da tabela 'produto' pelo EAN
       const { data: dadosProduto, error: erroProduto } = await supabase
         .from('produto')
-        .select('id_produto')
+        .select('id_produto, descricao, marca')
         .eq('ean', produto.ean)
         .limit(1)
         .maybeSingle();
 
       if (erroProduto || !dadosProduto) {
         alert("Produto não encontrado na tabela cadastral 'produto'.");
-        console.error("Erro ao buscar id_produto:", erroProduto);
+        console.error("Erro ao buscar produto:", erroProduto);
         return;
       }
 
@@ -153,7 +148,7 @@ const Inventario = () => {
         return;
       }
 
-      // 3️⃣ Checa se o item já existe na tabela estoque (EAN + Validade)
+      // 3️⃣ Checa se já existe linha no estoque para esse EAN + Validade
       const { data: itemEstoque, error: erroChecagem } = await supabase
         .from('estoque')
         .select('id')
@@ -166,39 +161,55 @@ const Inventario = () => {
       }
 
       let erroEstoque = null;
+      const qtdNumerica = parseFloat(ultimaContagem.quantidade);
 
       if (itemEstoque) {
-        // 4️⃣ UPDATE se já existe no estoque
+        // 4️⃣ UPDATE: Ajusta as colunas respeitando a estrutura exata da tabela estoque
+        const payloadUpdate = {
+          quantidade: qtdNumerica,
+          id_produto: idProdutoReal, // 👈 Nome corrigido para 'id_produto'
+          nome: dadosProduto.descricao || null,
+          marca: dadosProduto.marca || null
+        };
+
         const { error } = await supabase
           .from('estoque')
-          .update({ 
-            quantidade: ultimaContagem.quantidade,
-            produto_id: idProdutoReal 
-          })
+          .update(payloadUpdate)
           .eq('id', itemEstoque.id);
 
         erroEstoque = error;
       } else {
-        // 5️⃣ INSERT se não existe no estoque
+        // 5️⃣ INSERT: Cria o novo registro no estoque respeitando os tipos da tabela
+        const payloadInsert = {
+          ean: String(produto.ean).trim(),
+          validade: validadeLimpa,
+          quantidade: qtdNumerica,
+          id_produto: idProdutoReal, // 👈 Nome corrigido para 'id_produto'
+          nome: dadosProduto.descricao || null,
+          marca: dadosProduto.marca || null,
+          data_entrada: new Date().toISOString()
+        };
+
         const { error } = await supabase
           .from('estoque')
-          .insert([{
-            ean: produto.ean,
-            validade: validadeLimpa,
-            quantidade: ultimaContagem.quantidade,
-            produto_id: idProdutoReal
-          }]);
+          .insert([payloadInsert]);
 
         erroEstoque = error;
       }
 
       if (erroEstoque) {
-        alert('Erro ao salvar ajuste no estoque. Verifique o console.');
-        console.error("Erro no ajuste do estoque:", erroEstoque);
+        alert(`Erro ao salvar no estoque: ${erroEstoque.message || 'Verifique o console'}`);
+        console.error("Erro detalhado no ajuste do estoque:", {
+          mensagem: erroEstoque.message,
+          detalhes: erroEstoque.details,
+          hint: erroEstoque.hint,
+          codigo: erroEstoque.code,
+          erroCompleto: erroEstoque
+        });
         return;
       }
 
-      // 6️⃣ Marca as contagens como ajustadas
+      // 6️⃣ Marca as contagens desse EAN + Validade como ajustadas
       const { error: erroAtualizarContagens } = await supabase
         .from('contagens')
         .update({ ajustado: true })
