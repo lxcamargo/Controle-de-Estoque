@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
-import BarcodeScannerComponent from "react-qr-barcode-scanner";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 const supabase = createClient(
   "https://hejiipyxvufhnzeyfhdd.supabase.co",
@@ -97,18 +97,30 @@ function TelaPedido() {
     }
   };
 
+  // Scanner com Html5Qrcode
+  useEffect(() => {
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+
+    scanner.render(
+      (decodedText) => {
+        buscarDados(decodedText.trim());
+      },
+      (errorMessage) => {
+        console.warn("Erro de leitura:", errorMessage);
+      }
+    );
+
+    return () => {
+      scanner.clear().catch(err => console.error("Erro ao limpar scanner", err));
+    };
+  }, []);
+
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Reposição de Estoque</h2>
 
       <div style={styles.scanner}>
-        <BarcodeScannerComponent
-          width={250}
-          height={250}
-          onUpdate={(err, result) => {
-            if (result) buscarDados(result.text.trim());
-          }}
-        />
+        <div id="reader" style={{ width: "100%" }}></div>
       </div>
 
       <div style={styles.inputRow}>
@@ -134,40 +146,44 @@ function TelaPedido() {
 
           <p><strong>Selecione a validade da Loja:</strong></p>
           <div style={styles.flexWrap}>
-            {validadesLoja.map((item, idx) => (
-              <div key={idx} style={styles.loteBox}>
-                <button
-                  onClick={() => setValidadeLojaSelecionada(item.validade)}
-                  style={{
-                    ...styles.button,
-                    backgroundColor: validadeLojaSelecionada === item.validade ? "green" : "#ddd",
-                    color: validadeLojaSelecionada === item.validade ? "white" : "black"
-                  }}
-                >
-                  {item.validade}
-                </button>
-                <p style={styles.saldo}>Saldo: {item.quantidade}</p>
-              </div>
-            ))}
+            {validadesLoja
+              .filter(item => item.quantidade > 0) // só saldo > 0
+              .map((item, idx) => (
+                <div key={idx} style={styles.loteBox}>
+                  <button
+                    onClick={() => setValidadeLojaSelecionada(item.validade)}
+                    style={{
+                      ...styles.button,
+                      backgroundColor: validadeLojaSelecionada === item.validade ? "green" : "#ddd",
+                      color: validadeLojaSelecionada === item.validade ? "white" : "black"
+                    }}
+                  >
+                    {item.validade}
+                  </button>
+                  <p style={styles.saldo}>Saldo: {item.quantidade}</p>
+                </div>
+              ))}
           </div>
 
           <p><strong>Selecione a validade do Galpão:</strong></p>
           <div style={styles.flexWrap}>
-            {validadesGalpao.map((item, idx) => (
-              <div key={idx} style={styles.loteBox}>
-                <button
-                  onClick={() => setValidadeGalpaoSelecionada(item.validade)}
-                  style={{
-                    ...styles.button,
-                    backgroundColor: validadeGalpaoSelecionada === item.validade ? "green" : "#ddd",
-                    color: validadeGalpaoSelecionada === item.validade ? "white" : "black"
-                  }}
-                >
-                  {item.validade}
-                </button>
-                <p style={styles.saldo}>Saldo: {item.saldo}</p>
-              </div>
-            ))}
+            {validadesGalpao
+              .filter(item => item.saldo > 0) // só saldo > 0
+              .map((item, idx) => (
+                <div key={idx} style={styles.loteBox}>
+                  <button
+                    onClick={() => setValidadeGalpaoSelecionada(item.validade)}
+                    style={{
+                      ...styles.button,
+                      backgroundColor: validadeGalpaoSelecionada === item.validade ? "green" : "#ddd",
+                      color: validadeGalpaoSelecionada === item.validade ? "white" : "black"
+                    }}
+                  >
+                    {item.validade}
+                  </button>
+                  <p style={styles.saldo}>Saldo: {item.saldo}</p>
+                </div>
+              ))}
           </div>
 
           <p><strong>Sugestão de Pedido:</strong> {sugestao}</p>
