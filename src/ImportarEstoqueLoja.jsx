@@ -97,7 +97,6 @@ function TelaPedido() {
     }
   };
 
-  // Scanner com Html5Qrcode
   useEffect(() => {
     const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
 
@@ -140,22 +139,22 @@ function TelaPedido() {
 
       {dadosCarregados && (
         <div style={styles.card}>
-          <p><strong>EAN:</strong> {ean}</p>
-          <p><strong>Descrição:</strong> {descricaoProduto}</p>
-          <p><strong>Marca:</strong> {marcaProduto}</p>
+          <p style={styles.info}><strong>EAN:</strong> {ean}</p>
+          <p style={styles.info}><strong>Descrição:</strong> {descricaoProduto}</p>
+          <p style={styles.info}><strong>Marca:</strong> {marcaProduto}</p>
 
-          <p><strong>Selecione a validade da Loja:</strong></p>
+          <p style={styles.sectionTitle}>Selecione a validade da Loja:</p>
           <div style={styles.flexWrap}>
             {validadesLoja
-              .filter(item => item.quantidade > 0) // só saldo > 0
+              .filter(item => item.quantidade > 0)
               .map((item, idx) => (
                 <div key={idx} style={styles.loteBox}>
                   <button
                     onClick={() => setValidadeLojaSelecionada(item.validade)}
                     style={{
                       ...styles.button,
-                      backgroundColor: validadeLojaSelecionada === item.validade ? "green" : "#ddd",
-                      color: validadeLojaSelecionada === item.validade ? "white" : "black"
+                      backgroundColor: validadeLojaSelecionada === item.validade ? "#28a745" : "#007BFF",
+                      color: "white"
                     }}
                   >
                     {item.validade}
@@ -165,18 +164,18 @@ function TelaPedido() {
               ))}
           </div>
 
-          <p><strong>Selecione a validade do Galpão:</strong></p>
+          <p style={styles.sectionTitle}>Selecione a validade do Galpão:</p>
           <div style={styles.flexWrap}>
             {validadesGalpao
-              .filter(item => item.saldo > 0) // só saldo > 0
+              .filter(item => item.saldo > 0)
               .map((item, idx) => (
                 <div key={idx} style={styles.loteBox}>
                   <button
                     onClick={() => setValidadeGalpaoSelecionada(item.validade)}
                     style={{
                       ...styles.button,
-                      backgroundColor: validadeGalpaoSelecionada === item.validade ? "green" : "#ddd",
-                      color: validadeGalpaoSelecionada === item.validade ? "white" : "black"
+                      backgroundColor: validadeGalpaoSelecionada === item.validade ? "#28a745" : "#007BFF",
+                      color: "white"
                     }}
                   >
                     {item.validade}
@@ -186,7 +185,7 @@ function TelaPedido() {
               ))}
           </div>
 
-          <p><strong>Sugestão de Pedido:</strong> {sugestao}</p>
+          <p style={styles.info}><strong>Sugestão de Pedido:</strong> {sugestao}</p>
 
           <label style={styles.label}>
             Quantidade a pedir:
@@ -208,62 +207,84 @@ function TelaPedido() {
 }
 
 const styles = {
-  container: {
-    padding: "10px",
-    maxWidth: "100%",
-    fontFamily: "Arial, sans-serif"
+  container: { 
+    padding: "10px", 
+    maxWidth: "100%", 
+    fontFamily: "Arial, sans-serif" 
   },
-  title: {
-    fontSize: "20px",
-    textAlign: "center"
+  title: { 
+    fontSize: "22px", 
+    textAlign: "center", 
+    color: "#222", 
+    marginBottom: "15px" 
   },
-  scanner: {
-    display: "flex",
-    justifyContent: "center",
-    marginBottom: "15px"
+  scanner: { 
+    display: "flex", 
+    justifyContent: "center", 
+    marginBottom: "15px" 
   },
-  inputRow: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-    marginBottom: "15px"
+  inputRow: { 
+    display: "flex", 
+    flexDirection: "column", 
+    gap: "10px", 
+    marginBottom: "15px" 
   },
-  label: {
-    fontSize: "14px"
+  label: { 
+    fontSize: "14px", 
+    color: "#333", 
+    fontWeight: "bold" 
   },
-  input: {
-    width: "100%",
-    padding: "8px",
-    marginTop: "5px",
-    borderRadius: "5px",
-    border: "1px solid #ccc"
+  input: { 
+    width: "100%", 
+    padding: "10px", 
+    marginTop: "5px", 
+    borderRadius: "5px", 
+    border: "1px solid #ccc", 
+    fontSize: "16px" 
   },
-  button: {
-    padding: "12px",
-    borderRadius: "6px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: "bold",
-    width: "100%"
+  button: { 
+    padding: "12px", 
+    borderRadius: "6px", 
+    border: "none", 
+    cursor: "pointer", 
+    fontWeight: "bold", 
+    width: "100%", 
+    backgroundColor: "#007BFF", 
+    color: "white", 
+    fontSize: "16px" 
   },
-  card: {
-    backgroundColor: "#f9f9f9",
-    padding: "15px",
-    borderRadius: "8px"
+  card: { 
+    backgroundColor: "#fff", 
+    padding: "15px", 
+    borderRadius: "8px", 
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)", 
+    color: "#222" 
   },
-  flexWrap: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "10px"
+  info: { 
+    fontSize: "16px", 
+    marginBottom: "8px" 
   },
-  loteBox: {
-    flex: "1 1 45%",
-    textAlign: "center",
-    marginBottom: "10px"
+  sectionTitle: { 
+    fontSize: "15px", 
+    fontWeight: "bold", 
+    marginTop: "12px", 
+    marginBottom: "8px", 
+    color: "#444" 
   },
-  saldo: {
-    marginTop: "5px",
-    fontSize: "13px"
+  flexWrap: { 
+    display: "flex", 
+    flexWrap: "wrap", 
+    gap: "10px" 
+  },
+  loteBox: { 
+    flex: "1 1 100%", 
+    textAlign: "center", 
+    marginBottom: "10px" 
+  },
+  saldo: { 
+    marginTop: "5px", 
+    fontSize: "14px", 
+    color: "#555" 
   }
 };
 
