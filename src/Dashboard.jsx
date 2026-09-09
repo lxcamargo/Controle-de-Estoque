@@ -148,7 +148,7 @@ const Dashboard = () => {
                   </button>
                   <button onClick={() => abrirEmNovaAba("/importar-estoque-loja")}>
                     <i className="fas fa-file-upload"></i>
-                    <span>Importar Estoque Loja</span>
+                    <span>Reposição</span>
                   </button>
 
                   <button onClick={() => abrirEmNovaAba("/historico-saidas-loja")} className="btn-relatorio btn-vermelho">
@@ -177,7 +177,7 @@ const Dashboard = () => {
                     <>
                       <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
                         <i className="fas fa-arrow-circle-down"></i>
-                        <span>Realizar Baixa de Estoque</span>
+                        <span>Pedidos</span>
                       </button>
                     </>
                   )}
