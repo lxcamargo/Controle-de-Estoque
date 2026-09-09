@@ -1,131 +1,254 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import './ImportarProdutos.css';
-import planilhaIcon from './planilha-icon.svg';
+import React, { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import BarcodeScannerComponent from "react-qr-barcode-scanner";
 
-function ImportarEstoqueLoja() {
-  const [arquivo, setArquivo] = useState(null);
-  const [mensagem, setMensagem] = useState('');
-  const [erros, setErros] = useState([]);
-  const [carregando, setCarregando] = useState(false);
-  const [resumo, setResumo] = useState(null);
+const supabase = createClient(
+  "https://hejiipyxvufhnzeyfhdd.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlamlpcHl4dnVmaG56ZXlmaGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjQxNTAsImV4cCI6MjA2ODk0MDE1MH0.fq4G4b7lQktCRreV_CLem06221ZuOlY-miaVilcqfGE"
+);
 
-  const handleArquivoChange = (e) => {
-    const file = e.target.files[0];
-    setArquivo(file);
-    setMensagem('');
-    setErros([]);
-    setResumo(null);
+function TelaPedido() {
+  const [ean, setEan] = useState("");
+  const [descricaoProduto, setDescricaoProduto] = useState("");
+  const [marcaProduto, setMarcaProduto] = useState("");
+  const [validadesLoja, setValidadesLoja] = useState([]);
+  const [validadesGalpao, setValidadesGalpao] = useState([]);
+  const [validadeLojaSelecionada, setValidadeLojaSelecionada] = useState("");
+  const [validadeGalpaoSelecionada, setValidadeGalpaoSelecionada] = useState("");
+  const [sugestao, setSugestao] = useState(null);
+  const [quantidadePedido, setQuantidadePedido] = useState("");
+  const [dadosCarregados, setDadosCarregados] = useState(false);
+
+  const buscarDados = async (codigoEan) => {
+    if (!codigoEan) return;
+    setEan(codigoEan);
+
+    const { data: loja } = await supabase
+      .from("estoque_loja")
+      .select("quantidade, validade")
+      .eq("ean", codigoEan);
+    setValidadesLoja(loja || []);
+
+    const { data: galpao } = await supabase
+      .from("estoque")
+      .select("saldo, validade")
+      .eq("ean", codigoEan);
+    setValidadesGalpao(galpao || []);
+
+    const { data: produto } = await supabase
+      .from("produto")
+      .select("descricao, marca")
+      .eq("ean", codigoEan)
+      .single();
+    if (produto) {
+      setDescricaoProduto(produto.descricao);
+      setMarcaProduto(produto.marca);
+    }
+
+    const { data: historico } = await supabase
+      .from("saida_loja_historico")
+      .select("quantidade, data_saida")
+      .eq("ean", codigoEan);
+    if (historico && historico.length > 0) {
+      const tresMesesAtras = new Date();
+      tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+      const ultimos = historico.filter(h => new Date(h.data_saida) >= tresMesesAtras);
+      const media = ultimos.reduce((acc, h) => acc + h.quantidade, 0) / (ultimos.length || 1);
+      setSugestao(Math.ceil(media));
+      setQuantidadePedido(Math.ceil(media));
+    }
+
+    setDadosCarregados(true);
   };
 
-  const handleImportar = async () => {
-    if (!arquivo) {
-      setMensagem('❗ Selecione um arquivo primeiro.');
-      return;
-    }
+  const salvarPedido = async () => {
+    if (!ean || !quantidadePedido || !validadeGalpaoSelecionada) return;
 
-    if (!arquivo.name.toLowerCase().endsWith('.xlsx')) {
-      setMensagem('⚠️ Apenas arquivos .xlsx são aceitos.');
-      return;
-    }
+    const saldoLoja = validadesLoja.reduce((acc, l) => acc + l.quantidade, 0);
+    const saldoGalpao = validadesGalpao.find(g => g.validade === validadeGalpaoSelecionada)?.saldo || 0;
 
-    if (arquivo.size === 0) {
-      setMensagem('⚠️ O arquivo está vazio.');
-      return;
-    }
+    const { error } = await supabase
+      .from("pedidos")
+      .insert([{
+        ean,
+        descricao: descricaoProduto,
+        marca: marcaProduto,
+        saldo_loja: saldoLoja,
+        saldo_galpao: saldoGalpao,
+        quantidade: parseInt(quantidadePedido, 10),
+        validade: validadeGalpaoSelecionada,
+        data: new Date().toISOString()
+      }]);
 
-    const formData = new FormData();
-    formData.append('file', arquivo);
-
-    try {
-      setCarregando(true);
-      const response = await axios.post('http://127.0.0.1:8002/importar-estoque-loja', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      const resultado = response.data;
-
-      if (resultado.registros_importados > 0) {
-        setMensagem(`✅ ${resultado.registros_importados} registros importados com sucesso!`);
-        localStorage.setItem("estoqueLojaImportado", resultado.registros_importados);
-      } else {
-        setMensagem('⚠️ Nenhum registro foi importado.');
-      }
-
-      setErros(resultado.erros || []);
-      setResumo({
-        total: resultado.registros_importados || 0,
-        erros: resultado.erros?.length || 0,
-      });
-
-    } catch (error) {
-      if (error.code === 'ERR_NETWORK') {
-        setMensagem('🚫 Não foi possível conectar ao servidor. Verifique se o backend está rodando na porta 8002.');
-      } else if (error.response) {
-        setMensagem(`⚠️ Erro do servidor: ${error.response.data?.erro || 'Verifique o arquivo.'}`);
-      } else {
-        setMensagem(`❌ Erro inesperado: ${error.message}`);
-      }
-    } finally {
-      setCarregando(false);
+    if (error) {
+      alert("Erro ao salvar pedido: " + error.message);
+    } else {
+      alert("Pedido salvo com sucesso!");
+      setQuantidadePedido("");
+      setSugestao(null);
+      setEan("");
+      setDescricaoProduto("");
+      setMarcaProduto("");
+      setValidadeLojaSelecionada("");
+      setValidadeGalpaoSelecionada("");
+      setValidadesLoja([]);
+      setValidadesGalpao([]);
+      setDadosCarregados(false);
     }
   };
 
   return (
-    <div className="importar-container">
-      <div className="titulo-area">
-        <img src={planilhaIcon} alt="Ícone de planilha" className="icone" />
-        <h2>Importar Estoque Inicial - Loja</h2>
+    <div style={styles.container}>
+      <h2 style={styles.title}>Reposição de Estoque</h2>
+
+      <div style={styles.scanner}>
+        <BarcodeScannerComponent
+          width={250}
+          height={250}
+          onUpdate={(err, result) => {
+            if (result) buscarDados(result.text.trim());
+          }}
+        />
       </div>
 
-      <div className="upload-area">
-        <label className="arquivo-label">
-          Escolher arquivo
-          <input type="file" accept=".xlsx" onChange={handleArquivoChange} />
+      <div style={styles.inputRow}>
+        <label style={styles.label}>
+          Digite ou bipar EAN:
+          <input
+            type="text"
+            value={ean}
+            onChange={e => setEan(e.target.value)}
+            style={styles.input}
+          />
         </label>
-        <span className="arquivo-nome">
-          {arquivo ? (
-            <>
-              <img src={planilhaIcon} alt="Arquivo selecionado" className="icone-pequeno" />
-              {arquivo.name}
-            </>
-          ) : 'Nenhum arquivo escolhido'}
-        </span>
+        <button onClick={() => buscarDados(ean)} style={styles.button}>
+          Buscar Produto
+        </button>
       </div>
 
-      <button
-        className="botao-importar"
-        onClick={handleImportar}
-        disabled={!arquivo || carregando}
-      >
-        {carregando ? '⏳ Importando...' : 'IMPORTAR PLANILHA'}
-      </button>
+      {dadosCarregados && (
+        <div style={styles.card}>
+          <p><strong>EAN:</strong> {ean}</p>
+          <p><strong>Descrição:</strong> {descricaoProduto}</p>
+          <p><strong>Marca:</strong> {marcaProduto}</p>
 
-      {mensagem && (
-        <p className="mensagem" role="alert" aria-label="Mensagem de status">
-          {mensagem}
-        </p>
-      )}
-
-      {resumo && (
-        <div className="resumo-area">
-          <p>📦 Registros importados: <strong>{resumo.total}</strong></p>
-          <p>⚠️ Erros encontrados: <strong>{resumo.erros}</strong></p>
-        </div>
-      )}
-
-      {erros.length > 0 && (
-        <div className="erros-area">
-          <h4>📝 Erros encontrados:</h4>
-          <ul>
-            {erros.map((erro, index) => (
-              <li key={index}>{erro}</li>
+          <p><strong>Selecione a validade da Loja:</strong></p>
+          <div style={styles.flexWrap}>
+            {validadesLoja.map((item, idx) => (
+              <div key={idx} style={styles.loteBox}>
+                <button
+                  onClick={() => setValidadeLojaSelecionada(item.validade)}
+                  style={{
+                    ...styles.button,
+                    backgroundColor: validadeLojaSelecionada === item.validade ? "green" : "#ddd",
+                    color: validadeLojaSelecionada === item.validade ? "white" : "black"
+                  }}
+                >
+                  {item.validade}
+                </button>
+                <p style={styles.saldo}>Saldo: {item.quantidade}</p>
+              </div>
             ))}
-          </ul>
+          </div>
+
+          <p><strong>Selecione a validade do Galpão:</strong></p>
+          <div style={styles.flexWrap}>
+            {validadesGalpao.map((item, idx) => (
+              <div key={idx} style={styles.loteBox}>
+                <button
+                  onClick={() => setValidadeGalpaoSelecionada(item.validade)}
+                  style={{
+                    ...styles.button,
+                    backgroundColor: validadeGalpaoSelecionada === item.validade ? "green" : "#ddd",
+                    color: validadeGalpaoSelecionada === item.validade ? "white" : "black"
+                  }}
+                >
+                  {item.validade}
+                </button>
+                <p style={styles.saldo}>Saldo: {item.saldo}</p>
+              </div>
+            ))}
+          </div>
+
+          <p><strong>Sugestão de Pedido:</strong> {sugestao}</p>
+
+          <label style={styles.label}>
+            Quantidade a pedir:
+            <input
+              type="number"
+              value={quantidadePedido}
+              onChange={e => setQuantidadePedido(e.target.value)}
+              style={styles.input}
+            />
+          </label>
+
+          <button onClick={salvarPedido} style={{ ...styles.button, marginTop: 15 }}>
+            Salvar Pedido
+          </button>
         </div>
       )}
     </div>
   );
 }
 
-export default ImportarEstoqueLoja;
+const styles = {
+  container: {
+    padding: "10px",
+    maxWidth: "100%",
+    fontFamily: "Arial, sans-serif"
+  },
+  title: {
+    fontSize: "20px",
+    textAlign: "center"
+  },
+  scanner: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: "15px"
+  },
+  inputRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginBottom: "15px"
+  },
+  label: {
+    fontSize: "14px"
+  },
+  input: {
+    width: "100%",
+    padding: "8px",
+    marginTop: "5px",
+    borderRadius: "5px",
+    border: "1px solid #ccc"
+  },
+  button: {
+    padding: "12px",
+    borderRadius: "6px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "bold",
+    width: "100%"
+  },
+  card: {
+    backgroundColor: "#f9f9f9",
+    padding: "15px",
+    borderRadius: "8px"
+  },
+  flexWrap: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "10px"
+  },
+  loteBox: {
+    flex: "1 1 45%",
+    textAlign: "center",
+    marginBottom: "10px"
+  },
+  saldo: {
+    marginTop: "5px",
+    fontSize: "13px"
+  }
+};
+
+export default TelaPedido;
