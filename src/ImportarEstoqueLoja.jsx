@@ -4,7 +4,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 
 const supabase = createClient(
   "https://hejiipyxvufhnzeyfhdd.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlamlpcHl4dnVmaG56ZXlmaGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjQxNTAsImV4cCI6MjA2ODk0MDE1MH0.fq4G4b7lQktCRreV_CLem06221ZuOlY-miaVilcqfGE"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // sua chave anon
 );
 
 function TelaPedido() {
@@ -49,13 +49,18 @@ function TelaPedido() {
       .from("saida_loja_historico")
       .select("quantidade, data_saida")
       .eq("ean", codigoEan);
+
     if (historico && historico.length > 0) {
       const tresMesesAtras = new Date();
       tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+
       const ultimos = historico.filter(h => new Date(h.data_saida) >= tresMesesAtras);
       const media = ultimos.reduce((acc, h) => acc + h.quantidade, 0) / (ultimos.length || 1);
-      setSugestao(Math.ceil(media));
-      setQuantidadePedido(Math.ceil(media)*3);
+
+      // Sugestão multiplicada por 3
+      const sugestaoFinal = Math.ceil(media) * 3;
+      setSugestao(sugestaoFinal);
+      setQuantidadePedido(sugestaoFinal);
     }
 
     setDadosCarregados(true);
@@ -67,6 +72,15 @@ function TelaPedido() {
     const saldoLoja = validadesLoja.reduce((acc, l) => acc + l.quantidade, 0);
     const saldoGalpao = validadesGalpao.find(g => g.validade === validadeGalpaoSelecionada)?.saldo || 0;
 
+    // Data no formato nacional
+    const dataFormatada = new Date().toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
     const { error } = await supabase
       .from("pedidos")
       .insert([{
@@ -77,7 +91,7 @@ function TelaPedido() {
         saldo_galpao: saldoGalpao,
         quantidade: parseInt(quantidadePedido, 10),
         validade: validadeGalpaoSelecionada,
-        data: new Date().toISOString()
+        data: dataFormatada // agora salvo no formato nacional
       }]);
 
     if (error) {
@@ -99,7 +113,6 @@ function TelaPedido() {
 
   useEffect(() => {
     const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
-
     scanner.render(
       (decodedText) => {
         buscarDados(decodedText.trim());
@@ -108,7 +121,6 @@ function TelaPedido() {
         console.warn("Erro de leitura:", errorMessage);
       }
     );
-
     return () => {
       scanner.clear().catch(err => console.error("Erro ao limpar scanner", err));
     };
@@ -117,11 +129,9 @@ function TelaPedido() {
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Reposição de Estoque</h2>
-
       <div style={styles.scanner}>
         <div id="reader" style={{ width: "100%" }}></div>
       </div>
-
       <div style={styles.inputRow}>
         <label style={styles.label}>
           Digite ou bipar EAN:
@@ -207,85 +217,19 @@ function TelaPedido() {
 }
 
 const styles = {
-  container: { 
-    padding: "10px", 
-    maxWidth: "100%", 
-    fontFamily: "Arial, sans-serif" 
-  },
-  title: { 
-    fontSize: "22px", 
-    textAlign: "center", 
-    color: "#222", 
-    marginBottom: "15px" 
-  },
-  scanner: { 
-    display: "flex", 
-    justifyContent: "center", 
-    marginBottom: "15px" 
-  },
-  inputRow: { 
-    display: "flex", 
-    flexDirection: "column", 
-    gap: "10px", 
-    marginBottom: "15px" 
-  },
-  label: { 
-    fontSize: "14px", 
-    color: "#333", 
-    fontWeight: "bold" 
-  },
-  input: { 
-    width: "100%", 
-    padding: "10px", 
-    marginTop: "5px", 
-    borderRadius: "5px", 
-    border: "1px solid #ccc", 
-    fontSize: "16px" 
-  },
-  button: { 
-    padding: "12px", 
-    borderRadius: "6px", 
-    border: "none", 
-    cursor: "pointer", 
-    fontWeight: "bold", 
-    width: "100%", 
-    backgroundColor: "#007BFF", 
-    color: "white", 
-    fontSize: "16px" 
-  },
-  card: { 
-    backgroundColor: "#fff", 
-    padding: "15px", 
-    borderRadius: "8px", 
-    boxShadow: "0 2px 6px rgba(0,0,0,0.1)", 
-    color: "#222" 
-  },
-  info: { 
-    fontSize: "16px", 
-    marginBottom: "8px" 
-  },
-  sectionTitle: { 
-    fontSize: "15px", 
-    fontWeight: "bold", 
-    marginTop: "12px", 
-    marginBottom: "8px", 
-    color: "#444" 
-  },
-  flexWrap: { 
-    display: "flex", 
-    flexWrap: "wrap", 
-    gap: "10px" 
-  },
-  loteBox: { 
-    flex: "1 1 100%", 
-    textAlign: "center", 
-    marginBottom: "10px" 
-  },
-  saldo: { 
-    marginTop: "5px", 
-    fontSize: "14px", 
-    color: "#555" 
-  }
+  container: { padding: "10px", maxWidth: "100%", fontFamily: "Arial, sans-serif" },
+  title: { fontSize: "22px", textAlign: "center", color: "#222", marginBottom: "15px" },
+  scanner: { display: "flex", justifyContent: "center", marginBottom: "15px" },
+  inputRow: { display: "flex", flexDirection: "column", gap: "10px", marginBottom: "15px" },
+  label: { fontSize: "14px", color: "#333", fontWeight: "bold" },
+  input: { width: "100%", padding: "10px", marginTop: "5px", borderRadius: "5px", border: "1px solid #ccc", fontSize: "16px" },
+  button: { padding: "12px", borderRadius: "6px", border: "none", cursor: "pointer", fontWeight: "bold", width: "100%", backgroundColor: "#007BFF", color: "white", fontSize: "16px" },
+  card: { backgroundColor: "#fff", padding: "15px", borderRadius: "8px", boxShadow: "0 2px 6px rgba(0,0,0,0.1)", color: "#222" },
+  info: { fontSize: "16px", marginBottom: "8px" },
+  sectionTitle: { fontSize: "15px", fontWeight: "bold", marginTop: "12px", marginBottom: "8px", color: "#444" },
+  flexWrap: { display: "flex", flexWrap: "wrap", gap: "10px" },
+  loteBox: { flex: "1 1 100%", textAlign: "center", marginBottom: "10px" },
+  saldo: { marginTop: "5px", fontSize: "14px", color: "#555" }
 };
 
 export default TelaPedido;
