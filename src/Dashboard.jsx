@@ -173,6 +173,11 @@ const Dashboard = () => {
                     <span>Contagem - Loja</span>
                   </button>
 
+                   <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
+                        <i className="fas fa-arrow-circle-down"></i>
+                        <span>Pedidos</span>
+                      </button>
+
                   {isADM && (
                     <>
                       <button onClick={() => abrirEmNovaAba("/ajuste-estoque-loja-baixar")}>
