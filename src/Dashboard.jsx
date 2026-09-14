@@ -17,10 +17,31 @@ const Dashboard = () => {
   const podeVerPainelLoja = ["administrador", "operador_loja", "adm_loja", "adm_galpao"].includes(tipoUsuario);
   const bloquearEntradaSaidaGalpao = tipoUsuario === "operador_junior";
 
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/");
+  };
+
   return (
     <div className="overlay">
       <div className="dashboard-container">
-        <h2 className="titulo-dashboard">📊 Você está no Dashboard!</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 className="titulo-dashboard">📊 Você está no Dashboard!</h2>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "10px 16px",
+              borderRadius: "6px",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: "bold",
+              backgroundColor: "#dc3545",
+              color: "white"
+            }}
+          >
+            <i className="fas fa-sign-out-alt"></i> Sair
+          </button>
+        </div>
 
         {/* SETOR GALPÃO */}
         <details open>
@@ -215,4 +236,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
