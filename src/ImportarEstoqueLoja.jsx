@@ -57,7 +57,8 @@ function TelaPedido() {
       const ultimos = historico.filter(h => new Date(h.data_saida) >= tresMesesAtras);
       const media = ultimos.reduce((acc, h) => acc + h.quantidade, 0) / (ultimos.length || 1);
 
-      const sugestaoFinal = Math.ceil(media) * 3; // multiplicado por 3
+      // Sugestão multiplicada por 3
+      const sugestaoFinal = Math.ceil(media) * 3;
       setSugestao(sugestaoFinal);
       setQuantidadePedido(sugestaoFinal);
     }
@@ -71,6 +72,15 @@ function TelaPedido() {
     const saldoLoja = validadesLoja.reduce((acc, l) => acc + l.quantidade, 0);
     const saldoGalpao = validadesGalpao.find(g => g.validade === validadeGalpaoSelecionada)?.saldo || 0;
 
+    // Data no formato nacional
+    const dataFormatada = new Date().toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
     const { error } = await supabase
       .from("pedidos")
       .insert([{
@@ -81,7 +91,7 @@ function TelaPedido() {
         saldo_galpao: saldoGalpao,
         quantidade: parseInt(quantidadePedido, 10),
         validade: validadeGalpaoSelecionada,
-        data: new Date().toISOString() // salva em ISO
+        data: dataFormatada // agora salvo no formato nacional
       }]);
 
     if (error) {
