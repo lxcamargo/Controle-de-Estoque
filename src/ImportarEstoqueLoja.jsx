@@ -53,7 +53,7 @@ function TelaPedido() {
       const tresMesesAtras = new Date();
       tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
       const ultimos = historico.filter(h => new Date(h.data_saida) >= tresMesesAtras);
-      const media = ultimos.reduce((acc, h) => acc + h.quantidade, 0) / (ultimos.length || 1);
+      const media = ultimos.reduce((acc, h) => acc + h.quantidade, 0) / (ultimos.length || 1)*3;
       setSugestao(Math.ceil(media));
       setQuantidadePedido(Math.ceil(media));
     }
