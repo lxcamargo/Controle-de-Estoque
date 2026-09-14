@@ -59,7 +59,7 @@ function TelaPedido() {
 
       // Sugestão multiplicada por 3
       const sugestaoFinal = Math.ceil(media) * 3;
-      setSugestao(sugestaoFinal)* 3;
+      setSugestao(sugestaoFinal);
       setQuantidadePedido(sugestaoFinal);
     }
 
