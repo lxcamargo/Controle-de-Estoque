@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 
 const supabase = createClient(
   "https://hejiipyxvufhnzeyfhdd.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlamlpcHl4dnVmaG56ZXlmaGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjQxNTAsImV4cCI6MjA2ODk0MDE1MH0.fq4G4b7lQktCRreV_CLem06221ZuOlY-miaVilcqfGE" // sua chave anon
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlamlpcHl4dnVmaG56ZXlmaGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjQxNTAsImV4cCI6MjA2ODk0MDE1MH0.fq4G4b7lQktCRreV_CLem06221ZuOlY-miaVilcqfGE"
 );
 
 function ListaPedidos() {
@@ -14,7 +14,7 @@ function ListaPedidos() {
     const carregarPedidos = async () => {
       const { data: pedidosData, error } = await supabase
         .from("pedidos")
-        .select("ean, marca, descricao, saldo_loja, saldo_galpao, validade, quantidade, data"); // inclui campo data
+        .select("ean, marca, descricao, saldo_loja, saldo_galpao, validade, quantidade");
 
       if (error) {
         alert("Erro ao buscar pedidos: " + error.message);
@@ -41,23 +41,12 @@ function ListaPedidos() {
               const chave = `${ano}-W${semana}`;
               vendasPorSemana[chave] = (vendasPorSemana[chave] || 0) + h.quantidade;
             });
+
             const total = Object.values(vendasPorSemana).reduce((acc, v) => acc + v, 0);
             mediaSemanal = total / Object.keys(vendasPorSemana).length;
           }
 
-          // Formatar data no padrão nacional
-          let dataFormatada = "";
-          if (pedido.data) {
-            dataFormatada = new Date(pedido.data).toLocaleString("pt-BR", {
-              day: "2-digit",
-              month: "2-digit",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit"
-            });
-          }
-
-          return { ...pedido, media_semanal: mediaSemanal.toFixed(2), data_formatada: dataFormatada };
+          return { ...pedido, media_semanal: mediaSemanal.toFixed(2) };
         })
       );
 
@@ -77,8 +66,9 @@ function ListaPedidos() {
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Lista de Pedidos</h2>
-      <button onClick={exportarExcel} style={styles.button}>Exportar para Excel</button>
-
+      <button onClick={exportarExcel} style={styles.button}>
+        Exportar para Excel
+      </button>
       {pedidos.length === 0 ? (
         <p>Nenhum pedido encontrado.</p>
       ) : (
@@ -91,9 +81,8 @@ function ListaPedidos() {
               <th style={styles.th}>Saldo Loja</th>
               <th style={styles.th}>Saldo Galpão</th>
               <th style={styles.th}>Validade</th>
-              <th style={styles.th}>Quantidade Reposição</th>
+              <th style={styles.th}>Quantidade_Reposicão</th>
               <th style={styles.th}>Média Semanal Vendas</th>
-              <th style={styles.th}>Data</th>
             </tr>
           </thead>
           <tbody>
@@ -107,7 +96,6 @@ function ListaPedidos() {
                 <td style={styles.td}>{pedido.validade}</td>
                 <td style={styles.td}>{pedido.quantidade}</td>
                 <td style={styles.td}>{pedido.media_semanal}</td>
-                <td style={styles.td}>{pedido.data_formatada}</td>
               </tr>
             ))}
           </tbody>
@@ -118,12 +106,40 @@ function ListaPedidos() {
 }
 
 const styles = {
-  container: { padding: "10px", maxWidth: "100%", fontFamily: "Arial, sans-serif" },
-  title: { textAlign: "center", marginBottom: "15px" },
-  button: { padding: "10px", marginBottom: "15px", borderRadius: "6px", border: "none", cursor: "pointer", fontWeight: "bold", backgroundColor: "#4CAF50", color: "white" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { border: "1px solid #999", padding: "8px", backgroundColor: "#f0f0f0", textAlign: "center" },
-  td: { border: "1px solid #999", padding: "8px", textAlign: "center" }
+  container: {
+    padding: "10px",
+    maxWidth: "100%",
+    fontFamily: "Arial, sans-serif"
+  },
+  title: {
+    textAlign: "center",
+    marginBottom: "15px"
+  },
+  button: {
+    padding: "10px",
+    marginBottom: "15px",
+    borderRadius: "6px",
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "bold",
+    backgroundColor: "#4CAF50",
+    color: "white"
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse"
+  },
+  th: {
+    border: "1px solid #999",
+    padding: "8px",
+    backgroundColor: "#f0f0f0",
+    textAlign: "center"
+  },
+  td: {
+    border: "1px solid #999",
+    padding: "8px",
+    textAlign: "center"
+  }
 };
 
 export default ListaPedidos;
