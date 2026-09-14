@@ -4,7 +4,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 
 const supabase = createClient(
   "https://hejiipyxvufhnzeyfhdd.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // sua chave anon
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlamlpcHl4dnVmaG56ZXlmaGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjQxNTAsImV4cCI6MjA2ODk0MDE1MH0.fq4G4b7lQktCRreV_CLem06221ZuOlY-miaVilcqfGE" // sua chave anon
 );
 
 function TelaPedido() {
@@ -59,7 +59,7 @@ function TelaPedido() {
 
       // Sugestão multiplicada por 3
       const sugestaoFinal = Math.ceil(media) * 3;
-      setSugestao(sugestaoFinal);
+      setSugestao(sugestaoFinal)* 3;
       setQuantidadePedido(sugestaoFinal);
     }
 
