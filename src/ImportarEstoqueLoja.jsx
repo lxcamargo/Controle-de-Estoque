@@ -4,7 +4,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 
 const supabase = createClient(
   "https://hejiipyxvufhnzeyfhdd.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlamlpcHl4dnVmaG56ZXlmaGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjQxNTAsImV4cCI6MjA2ODk0MDE1MH0.fq4G4b7lQktCRreV_CLem06221ZuOlY-miaVilcqfGE" // sua chave anon
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // sua chave anon
 );
 
 function TelaPedido() {
@@ -57,8 +57,7 @@ function TelaPedido() {
       const ultimos = historico.filter(h => new Date(h.data_saida) >= tresMesesAtras);
       const media = ultimos.reduce((acc, h) => acc + h.quantidade, 0) / (ultimos.length || 1);
 
-      // Sugestão multiplicada por 3
-      const sugestaoFinal = Math.ceil(media) * 3;
+      const sugestaoFinal = Math.ceil(media) * 3; // multiplicado por 3
       setSugestao(sugestaoFinal);
       setQuantidadePedido(sugestaoFinal);
     }
@@ -72,15 +71,6 @@ function TelaPedido() {
     const saldoLoja = validadesLoja.reduce((acc, l) => acc + l.quantidade, 0);
     const saldoGalpao = validadesGalpao.find(g => g.validade === validadeGalpaoSelecionada)?.saldo || 0;
 
-    // Data no formato nacional
-    const dataFormatada = new Date().toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-
     const { error } = await supabase
       .from("pedidos")
       .insert([{
@@ -91,7 +81,7 @@ function TelaPedido() {
         saldo_galpao: saldoGalpao,
         quantidade: parseInt(quantidadePedido, 10),
         validade: validadeGalpaoSelecionada,
-        data: dataFormatada // agora salvo no formato nacional
+        data: new Date().toISOString() // salva em ISO
       }]);
 
     if (error) {
