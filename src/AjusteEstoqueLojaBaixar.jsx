@@ -14,7 +14,7 @@ function ListaPedidos() {
     const carregarPedidos = async () => {
       const { data: pedidosData, error } = await supabase
         .from("pedidos")
-        .select("ean, marca, descricao, saldo_loja, saldo_galpao, validade, quantidade");
+        .select("ean, marca, descricao, saldo_loja, saldo_galpao, validade, quantidade, usuario");
 
       if (error) {
         alert("Erro ao buscar pedidos: " + error.message);
@@ -63,6 +63,16 @@ function ListaPedidos() {
     XLSX.writeFile(wb, "pedidos.xlsx");
   };
 
+  const formatarData = (data) => {
+    if (!data) return "";
+    const d = new Date(data);
+    if (isNaN(d.getTime())) return data;
+    const dia = String(d.getUTCDate()).padStart(2, "0");
+    const mes = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const ano = d.getUTCFullYear();
+    return `${dia}/${mes}/${ano}`;
+  };
+
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Lista de Pedidos</h2>
@@ -83,6 +93,7 @@ function ListaPedidos() {
               <th style={styles.th}>Validade</th>
               <th style={styles.th}>Quantidade_Reposicão</th>
               <th style={styles.th}>Média Semanal Vendas</th>
+              <th style={styles.th}>Usuário</th>
             </tr>
           </thead>
           <tbody>
@@ -93,9 +104,10 @@ function ListaPedidos() {
                 <td style={styles.td}>{pedido.descricao}</td>
                 <td style={styles.td}>{pedido.saldo_loja}</td>
                 <td style={styles.td}>{pedido.saldo_galpao}</td>
-                <td style={styles.td}>{pedido.validade}</td>
+                <td style={styles.td}>{formatarData(pedido.validade)}</td>
                 <td style={styles.td}>{pedido.quantidade}</td>
                 <td style={styles.td}>{pedido.media_semanal}</td>
+                <td style={styles.td}>{pedido.usuario}</td>
               </tr>
             ))}
           </tbody>
