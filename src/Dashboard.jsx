@@ -6,6 +6,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const tipoUsuario = localStorage.getItem("tipoUsuario")?.toLowerCase();
   const isADM = tipoUsuario === "administrador";
+  const isOperadorInventario = tipoUsuario === "operador_inventario";
 
   const abrirEmNovaAba = (rota) => {
     window.open(`${window.location.origin}${rota}`, "_blank");
@@ -120,6 +121,16 @@ const Dashboard = () => {
                 </div>
               </section>
             </>
+          ) : isOperadorInventario ? (
+            <section className="dashboard-section">
+              <h3>📦 Operações de Estoque</h3>
+              <div className="button-grid">
+                <button onClick={() => abrirEmNovaAba("/contagem")}>
+                  <i className="fas fa-calculator"></i>
+                  <span>Tela de Contagem</span>
+                </button>
+              </div>
+            </section>
           ) : (
             <p className="alert alert-danger">🚫 Você não tem permissão para acessar operações do galpão.</p>
           )}
@@ -208,6 +219,16 @@ const Dashboard = () => {
                 </div>
               </section>
             </>
+          ) : isOperadorInventario ? (
+            <section className="dashboard-section">
+              <h3>🛒 Operações de Loja</h3>
+              <div className="button-grid">
+                <button onClick={() => abrirEmNovaAba("/contagem-loja")} className="btn-relatorio btn-laranja">
+                  <i className="fas fa-calculator"></i>
+                  <span>Contagem - Loja</span>
+                </button>
+              </div>
+            </section>
           ) : (
             <p className="alert alert-warning">🚫 Você não tem permissão para acessar operações da loja.</p>
           )}
