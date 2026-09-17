@@ -9,12 +9,14 @@ const supabase = createClient(
 
 function ListaPedidos() {
   const [pedidos, setPedidos] = useState([]);
+  const [selecionados, setSelecionados] = useState([]);
 
   useEffect(() => {
     const carregarPedidos = async () => {
       const { data: pedidosData, error } = await supabase
         .from("pedidos")
-        .select("ean, marca, descricao, saldo_loja, saldo_galpao, validade, quantidade, usuario");
+        .select("ean, marca, descricao, saldo_loja, saldo_galpao, validade, quantidade, usuario")
+        .eq("removido_tela", false);
 
       if (error) {
         alert("Erro ao buscar pedidos: " + error.message);
@@ -73,18 +75,75 @@ function ListaPedidos() {
     return `${dia}/${mes}/${ano}`;
   };
 
+  const toggleSelecionado = (ean) => {
+    setSelecionados((prev) =>
+      prev.includes(ean) ? prev.filter((e) => e !== ean) : [...prev, ean]
+    );
+  };
+
+  const toggleSelecionarTodos = () => {
+    if (selecionados.length === pedidos.length) {
+      setSelecionados([]);
+    } else {
+      setSelecionados(pedidos.map((p) => p.ean));
+    }
+  };
+
+  const excluirSelecionados = async () => {
+    if (selecionados.length === 0) return;
+
+    const confirmar = window.confirm(
+      `Remover ${selecionados.length} pedido(s) da tela? (os dados continuam salvos na tabela)`
+    );
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from("pedidos")
+      .update({ removido_tela: true })
+      .in("ean", selecionados);
+
+    if (error) {
+      alert("Erro ao remover pedidos: " + error.message);
+      return;
+    }
+
+    setPedidos((prev) => prev.filter((p) => !selecionados.includes(p.ean)));
+    setSelecionados([]);
+  };
+
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Lista de Pedidos</h2>
-      <button onClick={exportarExcel} style={styles.button}>
-        Exportar para Excel
-      </button>
+      <div style={styles.acoes}>
+        <button onClick={exportarExcel} style={styles.button}>
+          Exportar para Excel
+        </button>
+        <button
+          onClick={excluirSelecionados}
+          style={{
+            ...styles.button,
+            backgroundColor: "#dc3545",
+            opacity: selecionados.length === 0 ? 0.5 : 1,
+            cursor: selecionados.length === 0 ? "not-allowed" : "pointer"
+          }}
+          disabled={selecionados.length === 0}
+        >
+          Remover da Tela{selecionados.length > 0 ? ` (${selecionados.length})` : ""}
+        </button>
+      </div>
       {pedidos.length === 0 ? (
         <p>Nenhum pedido encontrado.</p>
       ) : (
         <table style={styles.table}>
           <thead>
             <tr>
+              <th style={styles.th}>
+                <input
+                  type="checkbox"
+                  checked={pedidos.length > 0 && selecionados.length === pedidos.length}
+                  onChange={toggleSelecionarTodos}
+                />
+              </th>
               <th style={styles.th}>EAN</th>
               <th style={styles.th}>Marca</th>
               <th style={styles.th}>Descrição</th>
@@ -99,6 +158,13 @@ function ListaPedidos() {
           <tbody>
             {pedidos.map((pedido, idx) => (
               <tr key={idx}>
+                <td style={styles.td}>
+                  <input
+                    type="checkbox"
+                    checked={selecionados.includes(pedido.ean)}
+                    onChange={() => toggleSelecionado(pedido.ean)}
+                  />
+                </td>
                 <td style={styles.td}>{pedido.ean}</td>
                 <td style={styles.td}>{pedido.marca}</td>
                 <td style={styles.td}>{pedido.descricao}</td>
@@ -127,9 +193,13 @@ const styles = {
     textAlign: "center",
     marginBottom: "15px"
   },
+  acoes: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "15px"
+  },
   button: {
     padding: "10px",
-    marginBottom: "15px",
     borderRadius: "6px",
     border: "none",
     cursor: "pointer",
