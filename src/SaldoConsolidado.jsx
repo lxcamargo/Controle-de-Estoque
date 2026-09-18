@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import * as XLSX from "xlsx";
 
+// Normaliza valores para comparação segura (remove diferenças de tipo/espaço)
+const normalizar = (valor) => String(valor ?? "").trim();
+
 export default function SaldoConsolidado() {
   const [estoque, setEstoque] = useState([]);
   const [produtos, setProdutos] = useState([]);
@@ -18,53 +21,98 @@ export default function SaldoConsolidado() {
   }, []);
 
   useEffect(() => {
+    // ✅ Busca todas as páginas de uma tabela, contornando o limite padrão
+    // de 1000 linhas por consulta do Supabase
+    const buscarTodosRegistros = async (tabela, aplicarFiltro) => {
+      const TAMANHO_PAGINA = 1000;
+      let pagina = 0;
+      let todos = [];
+
+      while (true) {
+        let query = supabase.from(tabela).select("*");
+        if (aplicarFiltro) query = aplicarFiltro(query);
+        query = query.range(pagina * TAMANHO_PAGINA, pagina * TAMANHO_PAGINA + TAMANHO_PAGINA - 1);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+
+        todos = todos.concat(data);
+        if (data.length < TAMANHO_PAGINA) break; // última página
+        pagina++;
+      }
+
+      return todos;
+    };
+
     const carregarDados = async () => {
-      const { data: dadosEstoque, error: erroEstoque } = await supabase
-        .from("estoque")
-        .select("*")
-        .gt("quantidade", 0);
+      try {
+        const [dadosEstoque, dadosProdutos, dadosWMS] = await Promise.all([
+          buscarTodosRegistros("estoque", (q) => q.gt("quantidade", 0)),
+          buscarTodosRegistros("produto"),
+          buscarTodosRegistros("saldo_wms"),
+        ]);
 
-      const { data: dadosProdutos, error: erroProdutos } = await supabase
-        .from("produto")
-        .select("*");
+        // 🔎 LOGS DE DEPURAÇÃO — veja no console (F12) a estrutura real dos dados
+        console.log(`Total estoque: ${dadosEstoque.length} | produto: ${dadosProdutos.length} | saldo_wms: ${dadosWMS.length}`);
 
-      const { data: dadosWMS, error: erroWMS } = await supabase
-        .from("saldo_wms")
-        .select("*");
-
-      if (erroEstoque || erroProdutos || erroWMS) {
-        setErro("Erro ao carregar dados.");
-        setEstoque([]);
-        setProdutos([]);
-        setSaldoWMS([]);
-      } else {
         setEstoque(dadosEstoque);
         setProdutos(dadosProdutos);
         setSaldoWMS(dadosWMS);
         setErro(null);
+      } catch (err) {
+        setErro("Erro ao carregar dados.");
+        setEstoque([]);
+        setProdutos([]);
+        setSaldoWMS([]);
       }
     };
 
     carregarDados();
   }, []);
 
+  // ✅ Mapas de busca rápida, com chaves normalizadas (string + trim)
+  // A tabela estoque já vem com o EAN direto — o match com produto deve ser por EAN,
+  // não por id_produto (esse campo não existe na tabela estoque).
+  const produtoPorEan = produtos.reduce((mapa, p) => {
+    mapa[normalizar(p.ean)] = p;
+    return mapa;
+  }, {});
+
+  const wmsPorEan = saldoWMS.reduce((mapa, w) => {
+    const chaveW = normalizar(w.ean);
+    if (!mapa[chaveW]) {
+      mapa[chaveW] = { quantidade: 0 };
+    }
+    // ✅ Soma o saldo de todas as linhas do mesmo EAN (pode haver mais de um galpão)
+    mapa[chaveW].quantidade += w.quantidade || 0;
+    return mapa;
+  }, {});
+
   const dadosAgrupados = Object.values(
     estoque.reduce((acc, item) => {
-      const produto = produtos.find(p => p.id_produto === item.id_produto);
-
-      // ✅ Se não achar no cadastro, usa o ean direto do estoque
-      const chave = produto?.ean || item.ean || "—";
+      const chave = normalizar(item.ean) || "—";
+      const produto = produtoPorEan[chave];
 
       if (!acc[chave]) {
-        const wms = saldoWMS.find(w => w.ean === chave);
+        const wms = wmsPorEan[chave];
         acc[chave] = {
           ean: chave,
-          descricao: produto?.descricao || item.descricao || "—",
+          descricao: produto?.descricao || item.nome || "—",
           marca: produto?.marca || item.marca || "—",
           quantidade: 0,
           quantidadeWMS: wms?.quantidade || 0,
           status: ""
         };
+      } else {
+        // ✅ Se ainda não temos descrição/marca (ex: primeiro lote sem essa info),
+        // tenta completar usando os dados de outro lote do mesmo EAN
+        if (acc[chave].descricao === "—" && (produto?.descricao || item.nome)) {
+          acc[chave].descricao = produto?.descricao || item.nome;
+        }
+        if (acc[chave].marca === "—" && (produto?.marca || item.marca)) {
+          acc[chave].marca = produto?.marca || item.marca;
+        }
       }
 
       acc[chave].quantidade += item.quantidade || 0;
