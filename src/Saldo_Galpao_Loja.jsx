@@ -97,13 +97,21 @@ export default function SaldoGalpaoLoja() {
     carregarDados();
   }, []);
 
+  // ✅ Soma o saldo_loja de TODAS as validades de cada EAN, para o filtro de saldo mínimo/máximo da Loja
+  // considerar o produto como um todo, e não apenas a linha/validade específica.
+  const totalLojaPorEan = dados.reduce((acc, item) => {
+    acc[item.ean] = (acc[item.ean] || 0) + (item.saldo_loja || 0);
+    return acc;
+  }, {});
+
   const dadosFiltrados = dados.filter(item => {
     const eanMatch = !filtroEan || (item.ean && item.ean.toString().includes(filtroEan));
     const marcaMatch = !filtroMarca || (item.marca && item.marca.toLowerCase().includes(filtroMarca.toLowerCase()));
     const nomeMatch = !filtroNome || (item.nome && item.nome.toLowerCase().includes(filtroNome.toLowerCase()));
 
-    const saldoLojaMinMatch = filtroSaldoLojaMin === "" || (item.saldo_loja ?? 0) >= parseFloat(filtroSaldoLojaMin);
-    const saldoLojaMaxMatch = filtroSaldoLojaMax === "" || (item.saldo_loja ?? 0) <= parseFloat(filtroSaldoLojaMax);
+    const totalLojaDoProduto = totalLojaPorEan[item.ean] || 0;
+    const saldoLojaMinMatch = filtroSaldoLojaMin === "" || totalLojaDoProduto >= parseFloat(filtroSaldoLojaMin);
+    const saldoLojaMaxMatch = filtroSaldoLojaMax === "" || totalLojaDoProduto <= parseFloat(filtroSaldoLojaMax);
     const saldoGalpaoMinMatch = filtroSaldoGalpaoMin === "" || (item.saldo_galpao ?? 0) >= parseFloat(filtroSaldoGalpaoMin);
     const saldoGalpaoMaxMatch = filtroSaldoGalpaoMax === "" || (item.saldo_galpao ?? 0) <= parseFloat(filtroSaldoGalpaoMax);
 
@@ -180,14 +188,14 @@ export default function SaldoGalpaoLoja() {
         />
         <input
           type="number"
-          placeholder="Saldo Loja mínimo"
+          placeholder="Saldo Loja mínimo (total do produto)"
           value={filtroSaldoLojaMin}
           onChange={e => setFiltroSaldoLojaMin(e.target.value)}
           style={estilos.input}
         />
         <input
           type="number"
-          placeholder="Saldo Loja máximo"
+          placeholder="Saldo Loja máximo (total do produto)"
           value={filtroSaldoLojaMax}
           onChange={e => setFiltroSaldoLojaMax(e.target.value)}
           style={estilos.input}
