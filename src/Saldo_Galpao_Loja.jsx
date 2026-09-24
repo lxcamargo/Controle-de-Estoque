@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
-import "./SaldoGalpaoLoja.css";
+import "./Saldo_Galpao_Loja.css";
 
 
 const supabaseUrl = "https://hejiipyxvufhnzeyfhdd.supabase.co";
