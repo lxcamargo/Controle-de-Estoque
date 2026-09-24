@@ -26,7 +26,7 @@ import ImportarEstoqueLoja from "./ImportarEstoqueLoja.jsx";
 import SaidaProdutoLoja from "./SaidaProdutoLoja.jsx";
 import PainelValidadeLoja from "./PainelValidadeLoja.jsx";
 import HistoricoSaidaLoja from "./HistoricoSaidaLoja.jsx";
-import EstoqueConsolidado from "./EstoqueConsolidado.jsx";
+import SaldoGalpaoLoja from "./Saldo_Galpao_Loja.jsx";
 
 // ✅ Novo componente para movimentações galpão → loja
 import MovimentacoesGalpaoLoja from "./MovimentacoesGalpaoLoja.jsx";
