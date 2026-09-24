@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import * as XLSX from "xlsx";
 
-
-
 const supabaseUrl = "https://hejiipyxvufhnzeyfhdd.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlamlpcHl4dnVmaG56ZXlmaGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjQxNTAsImV4cCI6MjA2ODk0MDE1MH0.fq4G4b7lQktCRreV_CLem06221ZuOlY-miaVilcqfGE";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -24,14 +22,59 @@ const MESES = [
   { valor: "12", nome: "Dezembro" },
 ];
 
+// ✅ Converte data "AAAA-MM-DD" (formato do banco) para "DD/MM/AAAA" (formato brasileiro), só para exibição
+function formatarDataBR(validade) {
+  if (!validade) return "";
+  const partes = validade.split("-");
+  if (partes.length !== 3) return validade;
+  const [ano, mes, dia] = partes;
+  return `${dia}/${mes}/${ano}`;
+}
+
+// Estilos organizados para a tela (grid de filtros + tabela com linhas de grade)
+const estilos = {
+  filtrosContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: "10px",
+    marginBottom: "20px",
+  },
+  input: {
+    padding: "6px 8px",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+  },
+  totaisBox: {
+    border: "1px solid #ddd",
+    borderRadius: "6px",
+    padding: "15px 20px",
+    marginBottom: "20px",
+    backgroundColor: "#f9f9f9",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: "10px",
+  },
+  th: {
+    border: "1px solid #ccc",
+    padding: "8px",
+    backgroundColor: "#f0f0f0",
+    textAlign: "left",
+  },
+  td: {
+    border: "1px solid #ddd",
+    padding: "8px",
+  },
+};
+
 export default function SaldoGalpaoLoja() {
   const [dados, setDados] = useState([]);
-  const [totais, setTotais] = useState({ loja: 0, galpao: 0 });
   const [filtroEan, setFiltroEan] = useState("");
   const [filtroMarca, setFiltroMarca] = useState("");
   const [filtroNome, setFiltroNome] = useState("");
 
-  // ✅ Novos filtros: saldo (mín/máx) e mês/ano de vencimento
+  // Filtros de saldo (mín/máx) e mês/ano de vencimento
   const [filtroSaldoLojaMin, setFiltroSaldoLojaMin] = useState("");
   const [filtroSaldoLojaMax, setFiltroSaldoLojaMax] = useState("");
   const [filtroSaldoGalpaoMin, setFiltroSaldoGalpaoMin] = useState("");
@@ -41,7 +84,6 @@ export default function SaldoGalpaoLoja() {
 
   useEffect(() => {
     async function carregarDados() {
-      // Consulta principal da view
       const { data, error } = await supabase
         .from("saldo_galpao_loja")
         .select("ean, nome, marca, validade, saldo_loja, saldo_galpao, saldo_total");
@@ -49,20 +91,7 @@ export default function SaldoGalpaoLoja() {
       if (error) {
         console.error(error);
       } else {
-        console.log("Dados recebidos:", data);
         setDados(data);
-      }
-
-      // Totais calculados pela própria view
-      const { data: totaisData, error: totaisError } = await supabase
-        .from("saldo_galpao_loja")
-        .select("sum(saldo_loja) as total_loja, sum(saldo_galpao) as total_galpao");
-
-      if (!totaisError && totaisData.length > 0) {
-        setTotais({
-          loja: totaisData[0].total_loja || 0,
-          galpao: totaisData[0].total_galpao || 0,
-        });
       }
     }
     carregarDados();
@@ -73,13 +102,12 @@ export default function SaldoGalpaoLoja() {
     const marcaMatch = !filtroMarca || (item.marca && item.marca.toLowerCase().includes(filtroMarca.toLowerCase()));
     const nomeMatch = !filtroNome || (item.nome && item.nome.toLowerCase().includes(filtroNome.toLowerCase()));
 
-    // ✅ Filtro por saldo, separado para Loja e Galpão (mín e/ou máx são opcionais)
     const saldoLojaMinMatch = filtroSaldoLojaMin === "" || (item.saldo_loja ?? 0) >= parseFloat(filtroSaldoLojaMin);
     const saldoLojaMaxMatch = filtroSaldoLojaMax === "" || (item.saldo_loja ?? 0) <= parseFloat(filtroSaldoLojaMax);
     const saldoGalpaoMinMatch = filtroSaldoGalpaoMin === "" || (item.saldo_galpao ?? 0) >= parseFloat(filtroSaldoGalpaoMin);
     const saldoGalpaoMaxMatch = filtroSaldoGalpaoMax === "" || (item.saldo_galpao ?? 0) <= parseFloat(filtroSaldoGalpaoMax);
 
-    // ✅ Filtro por mês/ano de vencimento (validade no formato AAAA-MM-DD)
+    // Filtro por mês/ano de vencimento (validade no formato AAAA-MM-DD vindo do banco)
     const [anoValidade, mesValidade] = (item.validade || "").split("-");
     const mesMatch = !filtroMesVencimento || mesValidade === filtroMesVencimento;
     const anoMatch = !filtroAnoVencimento || anoValidade === filtroAnoVencimento;
@@ -90,7 +118,6 @@ export default function SaldoGalpaoLoja() {
       && mesMatch && anoMatch;
   });
 
-  // ✅ Totais recalculados com base nos itens filtrados, exibidos no topo
   const totaisFiltrados = dadosFiltrados.reduce(
     (acc, item) => {
       acc.loja += item.saldo_loja || 0;
@@ -107,7 +134,7 @@ export default function SaldoGalpaoLoja() {
         EAN: item.ean,
         Nome: item.nome,
         Marca: item.marca,
-        Validade: item.validade,
+        Validade: formatarDataBR(item.validade),
         "Saldo Loja": item.saldo_loja,
         "Saldo Galpão": item.saldo_galpao,
         "Saldo Total": item.saldo_total
@@ -122,75 +149,67 @@ export default function SaldoGalpaoLoja() {
     <div style={{ padding: "2rem" }}>
       <h1>Saldo Galpão & Loja</h1>
 
-      <div style={{ marginBottom: "20px" }}>
-        <h3>Totais Gerais</h3>
-        <p><strong>Total Loja:</strong> {totais.loja}</p>
-        <p><strong>Total Galpão:</strong> {totais.galpao}</p>
-        <p><strong>Total Geral:</strong> {totais.loja + totais.galpao}</p>
-      </div>
-
-      {/* ✅ Totais dos itens filtrados na tela */}
-      <div style={{ marginBottom: "20px" }}>
-        <h3>Totais Filtrados</h3>
+      <div style={estilos.totaisBox}>
+        <h3 style={{ marginTop: 0 }}>Totais</h3>
         <p><strong>Total Loja:</strong> {totaisFiltrados.loja}</p>
         <p><strong>Total Galpão:</strong> {totaisFiltrados.galpao}</p>
         <p><strong>Total Geral:</strong> {totaisFiltrados.total}</p>
       </div>
 
-      <div style={{ marginBottom: "20px" }}>
+      <div style={estilos.filtrosContainer}>
         <input
           type="text"
           placeholder="Filtrar por EAN"
           value={filtroEan}
           onChange={e => setFiltroEan(e.target.value)}
-          style={{ marginRight: "10px" }}
+          style={estilos.input}
         />
         <input
           type="text"
           placeholder="Filtrar por Marca"
           value={filtroMarca}
           onChange={e => setFiltroMarca(e.target.value)}
-          style={{ marginRight: "10px" }}
+          style={estilos.input}
         />
         <input
           type="text"
           placeholder="Filtrar por Nome"
           value={filtroNome}
           onChange={e => setFiltroNome(e.target.value)}
-          style={{ marginRight: "10px" }}
+          style={estilos.input}
         />
         <input
           type="number"
           placeholder="Saldo Loja mínimo"
           value={filtroSaldoLojaMin}
           onChange={e => setFiltroSaldoLojaMin(e.target.value)}
-          style={{ marginRight: "10px", width: "130px" }}
+          style={estilos.input}
         />
         <input
           type="number"
           placeholder="Saldo Loja máximo"
           value={filtroSaldoLojaMax}
           onChange={e => setFiltroSaldoLojaMax(e.target.value)}
-          style={{ marginRight: "10px", width: "130px" }}
+          style={estilos.input}
         />
         <input
           type="number"
           placeholder="Saldo Galpão mínimo"
           value={filtroSaldoGalpaoMin}
           onChange={e => setFiltroSaldoGalpaoMin(e.target.value)}
-          style={{ marginRight: "10px", width: "140px" }}
+          style={estilos.input}
         />
         <input
           type="number"
           placeholder="Saldo Galpão máximo"
           value={filtroSaldoGalpaoMax}
           onChange={e => setFiltroSaldoGalpaoMax(e.target.value)}
-          style={{ marginRight: "10px", width: "140px" }}
+          style={estilos.input}
         />
         <select
           value={filtroMesVencimento}
           onChange={e => setFiltroMesVencimento(e.target.value)}
-          style={{ marginRight: "10px" }}
+          style={estilos.input}
         >
           <option value="">Mês de vencimento</option>
           {MESES.map(mes => (
@@ -202,34 +221,34 @@ export default function SaldoGalpaoLoja() {
           placeholder="Ano de vencimento"
           value={filtroAnoVencimento}
           onChange={e => setFiltroAnoVencimento(e.target.value)}
-          style={{ width: "140px" }}
+          style={estilos.input}
         />
       </div>
 
-      <button onClick={exportarExcel}>Exportar para Excel</button>
+      <button onClick={exportarExcel} style={{ marginBottom: "15px" }}>Exportar para Excel</button>
 
-      <table className="SaldoGalpaoLoja" style={{ marginTop: "20px" }}>
+      <table style={estilos.table}>
         <thead>
           <tr>
-            <th>EAN</th>
-            <th>Nome</th>
-            <th>Marca</th>
-            <th>Validade</th>
-            <th>Saldo Loja</th>
-            <th>Saldo Galpão</th>
-            <th>Saldo Total</th>
+            <th style={estilos.th}>EAN</th>
+            <th style={estilos.th}>Nome</th>
+            <th style={estilos.th}>Marca</th>
+            <th style={estilos.th}>Validade</th>
+            <th style={estilos.th}>Saldo Loja</th>
+            <th style={estilos.th}>Saldo Galpão</th>
+            <th style={estilos.th}>Saldo Total</th>
           </tr>
         </thead>
         <tbody>
           {dadosFiltrados.map((item, idx) => (
             <tr key={idx}>
-              <td>{item.ean}</td>
-              <td>{item.nome}</td>
-              <td>{item.marca}</td>
-              <td className="validade">{item.validade}</td>
-              <td>{item.saldo_loja}</td>
-              <td>{item.saldo_galpao}</td>
-              <td>{item.saldo_total}</td>
+              <td style={estilos.td}>{item.ean}</td>
+              <td style={estilos.td}>{item.nome}</td>
+              <td style={estilos.td}>{item.marca}</td>
+              <td style={estilos.td}>{formatarDataBR(item.validade)}</td>
+              <td style={estilos.td}>{item.saldo_loja}</td>
+              <td style={estilos.td}>{item.saldo_galpao}</td>
+              <td style={estilos.td}>{item.saldo_total}</td>
             </tr>
           ))}
         </tbody>
