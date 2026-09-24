@@ -121,7 +121,7 @@ export default function App() {
         <Route path="/importar-estoque-loja" element={<ImportarEstoqueLoja />} />
         <Route path="/painel-validade-loja" element={<PainelValidadeLoja />} />
         <Route path="/historico-saidas-loja" element={<HistoricoSaidaLoja />} />
-        <Route path="/saldo_galpao_loja" element={<EstoqueConsolidado />} />
+        <Route path="/saldo_galpao_loja" element={<saldo_galpao_loja />} />
 
         {/* ✅ Nova rota para movimentações entre setores */}
         <Route path="/movimentacoes-galpao-loja" element={<MovimentacoesGalpaoLoja />} />
