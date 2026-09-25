@@ -247,12 +247,6 @@ const Dashboard = () => {
                   <i className="fas fa-layer-group"></i>
                   <span>Contagem Consolidada</span>
                 </button>
-                {/* ✅ Novo botão: Saldo_Galpao_Loja (inclui adm_galpao) */}
-                {podeVerSaldoGalpaoLoja && (
-                  <button onClick={() => abrirEmNovaAba("/saldo_galpao_loja")} className="btn-relatorio btn-azul">
-                    <i className="fas fa-store"></i>
-                    <span>Saldo_Galpao_Loja</span>
-                  </button>
               </div>
             </section>
           )}
